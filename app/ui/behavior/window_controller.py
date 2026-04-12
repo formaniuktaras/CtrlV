@@ -4,10 +4,15 @@ from PySide6.QtCore import QObject, QPoint, QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QWidget
 
-from app.services.settings_service import SettingsService
+from typing import TYPE_CHECKING
+
+from app.core.sidebar_types import DockSide, PanelState, RuntimeState
 from app.ui.behavior.animation import AnimationController
 from app.ui.behavior.edge_dock import EdgeDockController
-from app.ui.behavior.types import DockSide, PanelState, RuntimeState
+
+
+if TYPE_CHECKING:
+    from app.services.settings_service import SettingsService
 
 
 class WindowBehaviorController(QObject):
