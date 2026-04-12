@@ -55,6 +55,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
+Name: "autostart"; Description: "Launch at Windows startup"; GroupDescription: "Startup options:"; Flags: unchecked
 
 [Files]
 Source: "{#PortableDir}\\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
@@ -62,6 +63,7 @@ Source: "{#PortableDir}\\*"; DestDir: "{app}"; Flags: recursesubdirs createallsu
 [Icons]
 Name: "{group}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; WorkingDir: "{app}"
 Name: "{autodesktop}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; Tasks: desktopicon; WorkingDir: "{app}"
+Name: "{userstartup}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; Parameters: "--startup"; Tasks: autostart; WorkingDir: "{app}"
 
 [Run]
 Filename: "{app}\\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
@@ -69,3 +71,4 @@ Filename: "{app}\\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: n
 [UninstallDelete]
 ; User settings are preserved intentionally.
 ; Type: filesandordirs; Name: "{localappdata}\\CtrlV"
+Type: files; Name: "{userstartup}\\{#MyAppName}.lnk"

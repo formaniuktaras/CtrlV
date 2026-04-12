@@ -86,6 +86,16 @@ class SettingsService:
         self._settings.setValue("sidebar/auto_hide_enabled", state.auto_hide_enabled)
         self._settings.sync()
 
+    def is_first_run(self) -> bool:
+        return not self._bool("app/first_run_completed", False)
+
+    def mark_first_run_completed(self) -> None:
+        self._settings.setValue("app/first_run_completed", True)
+        self._settings.sync()
+
+    def flush(self) -> None:
+        self._settings.sync()
+
     def _int(self, key: str, default: int) -> int:
         value = self._settings.value(key, default)
         try:

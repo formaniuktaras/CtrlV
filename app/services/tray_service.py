@@ -22,6 +22,8 @@ class TrayService(QObject):
     quit_requested = Signal()
     always_on_top_toggled = Signal(bool)
     auto_hide_toggled = Signal(bool)
+    autostart_toggled = Signal(bool)
+    menu_opening = Signal()
 
     def __init__(self, parent_widget: QWidget, tooltip: str = "CtrlV Clipboard Manager") -> None:
         super().__init__(parent_widget)
@@ -35,6 +37,7 @@ class TrayService(QObject):
         self._always_on_top_action: QAction | None = None
         self._auto_hide_action: QAction | None = None
         self._clear_history_action: QAction | None = None
+        self._autostart_action: QAction | None = None
         self._quit_action: QAction | None = None
 
     @staticmethod
@@ -51,6 +54,7 @@ class TrayService(QObject):
         tray_icon.activated.connect(self._on_tray_activated)
 
         menu = QMenu(self._parent_widget)
+        menu.aboutToShow.connect(self.menu_opening.emit)
 
         self._toggle_sidebar_action = menu.addAction("Show sidebar")
         self._toggle_sidebar_action.triggered.connect(self.toggle_sidebar_requested.emit)
@@ -62,6 +66,12 @@ class TrayService(QObject):
         self._auto_hide_action = menu.addAction("Auto-hide")
         self._auto_hide_action.setCheckable(True)
         self._auto_hide_action.toggled.connect(self.auto_hide_toggled.emit)
+
+        menu.addSeparator()
+
+        self._autostart_action = menu.addAction("Launch at Windows startup")
+        self._autostart_action.setCheckable(True)
+        self._autostart_action.toggled.connect(self.autostart_toggled.emit)
 
         menu.addSeparator()
 
@@ -93,6 +103,13 @@ class TrayService(QObject):
             self._auto_hide_action.blockSignals(True)
             self._auto_hide_action.setChecked(state.auto_hide_enabled)
             self._auto_hide_action.blockSignals(False)
+
+    def set_autostart_checked(self, enabled: bool) -> None:
+        if self._autostart_action is None:
+            return
+        self._autostart_action.blockSignals(True)
+        self._autostart_action.setChecked(enabled)
+        self._autostart_action.blockSignals(False)
 
     def show_message(self, title: str, message: str, timeout_ms: int = 2500) -> None:
         if self._tray_icon is None:

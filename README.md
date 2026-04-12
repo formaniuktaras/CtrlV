@@ -31,7 +31,10 @@ CtrlV starts as a frameless sidebar window and monitors clipboard changes.
 - Collapse/expand behavior
 - Auto-hide/reveal behavior near screen edge
 - Tray integration (toggle panel, clear history, quit, always-on-top, auto-hide)
+- Tray autostart toggle (`Launch at Windows startup`) synchronized with real Windows startup state
 - Settings persistence (`QSettings`) for sidebar/tray behavior
+- Single-instance protection (second launch activates the existing instance)
+- Startup/login behavior (`--startup`) to open in tray-first mode
 - Windows packaging layer:
   - PyInstaller spec (`onedir` portable build)
   - Inno Setup installer
@@ -51,8 +54,15 @@ This repository intentionally does **not** include the following yet:
 - cloud sync;
 - code signing;
 - CI/CD release automation;
-- Windows startup integration;
 - alternative package channels (MSI/winget/scoop).
+
+## Autostart and tray lifecycle
+
+- Autostart is implemented with one mechanism: a per-user shortcut in `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`.
+- Users can toggle it from tray menu: **Launch at Windows startup**.
+- `X` (close button) hides to tray; tray **Quit** fully exits the app and runs service cleanup.
+- When launched by startup shortcut (`--startup`), CtrlV starts hidden and stays in tray until opened.
+- On first run, CtrlV shows a one-time tray hint: "CtrlV is running in the system tray."
 
 ## Run from source (developer quick start)
 
