@@ -22,6 +22,14 @@ class SidebarSettings:
     reveal_vertical_tolerance_px: int = 80
 
 
+@dataclass(slots=True)
+class TraySettings:
+    close_to_tray_enabled: bool = True
+    tray_click_action: str = "toggle_sidebar"
+    always_on_top: bool = True
+    auto_hide_enabled: bool = True
+
+
 class SettingsService:
     """Application settings wrapper used by runtime controllers."""
 
@@ -61,6 +69,21 @@ class SettingsService:
         self._settings.setValue("sidebar/always_on_top", state.always_on_top)
         self._settings.setValue("sidebar/reveal_trigger_px", state.reveal_trigger_px)
         self._settings.setValue("sidebar/reveal_vertical_tolerance_px", state.reveal_vertical_tolerance_px)
+        self._settings.sync()
+
+    def load_tray_settings(self) -> TraySettings:
+        return TraySettings(
+            close_to_tray_enabled=self._bool("tray/close_to_tray_enabled", True),
+            tray_click_action=str(self._settings.value("tray/tray_click_action", "toggle_sidebar")),
+            always_on_top=self._bool("sidebar/always_on_top", True),
+            auto_hide_enabled=self._bool("sidebar/auto_hide_enabled", True),
+        )
+
+    def save_tray_settings(self, state: TraySettings) -> None:
+        self._settings.setValue("tray/close_to_tray_enabled", state.close_to_tray_enabled)
+        self._settings.setValue("tray/tray_click_action", state.tray_click_action)
+        self._settings.setValue("sidebar/always_on_top", state.always_on_top)
+        self._settings.setValue("sidebar/auto_hide_enabled", state.auto_hide_enabled)
         self._settings.sync()
 
     def _int(self, key: str, default: int) -> int:

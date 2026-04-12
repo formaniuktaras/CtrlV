@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication
 from app.core.clipboard_monitor import ClipboardMonitor
 from app.core.clipboard_parser import ClipboardParser
 from app.core.history_store import HistoryStore
+from app.services.app_lifecycle import AppLifecycleController
 from app.services.clipboard_service import ClipboardService
 from app.services.settings_service import SettingsService
 from app.ui.main_window import MainWindow
@@ -39,6 +40,19 @@ def create_application(argv: Sequence[str]) -> QApplication:
         monitor=monitor,
         settings_service=settings_service,
     )
-    window.show()
+
+    tray_settings = settings_service.load_tray_settings()
+    window.set_always_on_top(tray_settings.always_on_top)
+    window.set_auto_hide_enabled(tray_settings.auto_hide_enabled)
+
+    lifecycle = AppLifecycleController(
+        app=app,
+        window=window,
+        monitor=monitor,
+        settings_service=settings_service,
+    )
+    app._lifecycle = lifecycle  # type: ignore[attr-defined]
+
+    lifecycle.show_sidebar()
 
     return app

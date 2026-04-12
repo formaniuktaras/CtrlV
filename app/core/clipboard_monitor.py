@@ -59,6 +59,9 @@ class ClipboardMonitor:
     def store(self) -> HistoryStore:
         return self._store
 
+    def shutdown(self) -> None:
+        self._clipboard.dataChanged.disconnect(self._on_clipboard_changed)
+
     def seed_with_current_clipboard(self) -> None:
         current = self._clipboard.mimeData()
         if current is None:

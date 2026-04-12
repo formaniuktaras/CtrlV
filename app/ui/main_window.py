@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QCloseEvent, QHideEvent, QShowEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -25,6 +26,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 class MainWindow(QMainWindow):
+    close_requested = Signal(object)
+    visibility_changed = Signal(bool)
+
     def __init__(
         self,
         store: HistoryStore,
@@ -55,6 +59,40 @@ class MainWindow(QMainWindow):
         self._refresh_history()
         self._monitor.seed_with_current_clipboard()
         self._window_behavior.on_ready()
+
+    @property
+    def always_on_top(self) -> bool:
+        return self._window_behavior.always_on_top
+
+    @property
+    def auto_hide_enabled(self) -> bool:
+        return self._window_behavior.auto_hide_enabled
+
+    def set_always_on_top(self, enabled: bool) -> None:
+        self._window_behavior.set_always_on_top(enabled)
+
+    def set_auto_hide_enabled(self, enabled: bool) -> None:
+        self._window_behavior.set_auto_hide_enabled(enabled)
+
+    def clear_history(self) -> None:
+        self._store.clear()
+        self._refresh_history()
+
+    def shutdown(self) -> None:
+        self._window_behavior.shutdown()
+
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
+        self.close_requested.emit(event)
+        if event.isAccepted():
+            super().closeEvent(event)
+
+    def showEvent(self, event: QShowEvent) -> None:  # noqa: N802
+        super().showEvent(event)
+        self.visibility_changed.emit(True)
+
+    def hideEvent(self, event: QHideEvent) -> None:  # noqa: N802
+        super().hideEvent(event)
+        self.visibility_changed.emit(False)
 
     def _setup_ui(self) -> None:
         self.setMinimumWidth(340)
@@ -87,7 +125,7 @@ class MainWindow(QMainWindow):
 
     def _connect_signals(self) -> None:
         self._restore_button.clicked.connect(self._restore_selected)
-        self._clear_button.clicked.connect(self._clear_history)
+        self._clear_button.clicked.connect(self.clear_history)
         self._history_list.itemDoubleClicked.connect(lambda _: self._restore_selected())
 
         self._monitor.signals.item_added.connect(self._on_item_added)
@@ -106,10 +144,6 @@ class MainWindow(QMainWindow):
     def _refresh_history(self) -> None:
         self._history_list.set_items(self._store.get_items())
         self._status_label.setText(f"Items in history: {len(self._store)}")
-
-    def _clear_history(self) -> None:
-        self._store.clear()
-        self._refresh_history()
 
     def _restore_selected(self) -> None:
         item = self._history_list.selected_item()
