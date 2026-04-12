@@ -28,6 +28,7 @@ class AppLifecycleController(QObject):
         monitor: ClipboardMonitor,
         settings_service: SettingsService,
         autostart_service: AutostartService,
+        settings_controller: SettingsController,
         start_minimized: bool,
     ) -> None:
         super().__init__(window)
@@ -37,18 +38,14 @@ class AppLifecycleController(QObject):
         self._monitor = monitor
         self._settings_service = settings_service
         self._autostart_service = autostart_service
+        self._settings_controller = settings_controller
         self._start_minimized = start_minimized
 
         self._tray_settings = self._settings_service.load_tray_settings()
         self._tray_service = TrayService(parent_widget=self._window)
         self._tray_enabled = self._tray_service.initialize()
         self._quitting = False
-        self._settings_controller = SettingsController(
-            settings_service=self._settings_service,
-            panel_controller=self._panel_controller,
-            autostart_service=self._autostart_service,
-            parent=self,
-        )
+        self._settings_controller.setParent(self)
         self._settings_window = SettingsWindow(controller=self._settings_controller, parent=self._window)
 
         self._wire_window_signals()

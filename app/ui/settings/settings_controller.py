@@ -26,7 +26,7 @@ class SettingsViewState:
 
 
 class SettingsController(QObject):
-    """UI-level mediator for reading/applying user settings."""
+    """Single settings integration point between UI and runtime services."""
 
     state_changed = Signal(object)
     save_failed = Signal(str)
@@ -43,7 +43,7 @@ class SettingsController(QObject):
         self._panel_controller = panel_controller
         self._autostart_service = autostart_service
 
-    def load_state(self) -> SettingsViewState:
+    def get_current_settings(self) -> SettingsViewState:
         sidebar = self._settings_service.load_sidebar_settings()
         return SettingsViewState(
             launch_at_startup=self._autostart_service.is_enabled(),
@@ -56,36 +56,55 @@ class SettingsController(QObject):
             panel_width=sidebar.width,
         )
 
-    def apply_state(self, state: SettingsViewState) -> bool:
+    def set_autostart(self, enabled: bool) -> bool:
         try:
-            self._set_autostart(state.launch_at_startup)
+            if enabled:
+                self._autostart_service.enable()
+            else:
+                self._autostart_service.disable()
         except AutostartError as exc:
             LOGGER.exception("Failed to update autostart state")
             self.save_failed.emit(str(exc))
+            self._emit_state()
             return False
 
-        self._settings_service.save_start_minimized_to_tray(state.start_minimized_to_tray)
-
-        self._panel_controller.set_always_on_top(state.always_on_top)
-        self._panel_controller.set_auto_hide_enabled(state.auto_hide_sidebar)
-        self._panel_controller.set_reveal_on_hover_enabled(state.reveal_on_hover)
-        self._panel_controller.set_hide_delay_ms(state.hide_delay_ms)
-        self._panel_controller.set_dock(
-            side=(DockState.LEFT if state.dock_side == DockSide.LEFT else DockState.RIGHT)
-        )
-        self._panel_controller.set_panel_width(state.panel_width)
-
-        self.state_changed.emit(self.load_state())
+        self._emit_state()
         return True
 
-    def reset_panel_state(self) -> SettingsViewState:
+    def set_start_minimized_to_tray(self, enabled: bool) -> None:
+        self._settings_service.save_start_minimized_to_tray(enabled)
+        self._emit_state()
+
+    def set_always_on_top(self, enabled: bool) -> None:
+        self._panel_controller.set_always_on_top(enabled)
+        self._emit_state()
+
+    def set_auto_hide(self, enabled: bool) -> None:
+        self._panel_controller.set_auto_hide_enabled(enabled)
+        self._emit_state()
+
+    def set_reveal_on_hover(self, enabled: bool) -> None:
+        self._panel_controller.set_reveal_on_hover_enabled(enabled)
+        self._emit_state()
+
+    def set_hide_delay_ms(self, delay_ms: int) -> None:
+        self._panel_controller.set_hide_delay_ms(delay_ms)
+        self._emit_state()
+
+    def set_dock_side(self, side: DockSide) -> None:
+        mapped = DockState.LEFT if side == DockSide.LEFT else DockState.RIGHT
+        self._panel_controller.set_dock(side=mapped)
+        self._emit_state()
+
+    def set_panel_width(self, width: int) -> None:
+        self._panel_controller.set_panel_width(width)
+        self._emit_state()
+
+    def reset_window_state(self) -> SettingsViewState:
         self._panel_controller.reset_position_state()
-        state = self.load_state()
+        return self._emit_state()
+
+    def _emit_state(self) -> SettingsViewState:
+        state = self.get_current_settings()
         self.state_changed.emit(state)
         return state
-
-    def _set_autostart(self, enabled: bool) -> None:
-        if enabled:
-            self._autostart_service.enable()
-            return
-        self._autostart_service.disable()
