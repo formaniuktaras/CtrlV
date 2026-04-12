@@ -1,17 +1,20 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QObject, QPoint, QEvent, Qt, QTimer
+from PySide6.QtCore import QObject, QPoint, QEvent, Qt, QTimer, Signal
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QWidget
 
 from app.services.settings_service import SettingsService
 from app.ui.behavior.animation import AnimationController
 from app.ui.behavior.edge_dock import EdgeDockController
-from app.ui.behavior.types import PanelState
+from app.ui.behavior.types import DockSide, PanelState, RuntimeState
 
 
 class WindowBehaviorController(QObject):
     """Configures sidebar window mode and delegates runtime behavior to controllers."""
+
+    hover_expand_requested = Signal()
+    hover_collapse_requested = Signal()
 
     def __init__(self, window: QWidget, drag_handle: QWidget, settings_service: SettingsService) -> None:
         super().__init__(window)
@@ -25,6 +28,8 @@ class WindowBehaviorController(QObject):
         self._dock = EdgeDockController(window=window, animation=self._animation)
         self._dock.apply_settings(self._settings)
         self._dock.settings_changed.connect(self._persist_sidebar_settings)
+        self._dock.expand_requested.connect(self.hover_expand_requested.emit)
+        self._dock.collapse_requested.connect(self.hover_collapse_requested.emit)
 
         self._dragging = False
         self._drag_offset = QPoint()
@@ -47,6 +52,18 @@ class WindowBehaviorController(QObject):
     @property
     def auto_hide_enabled(self) -> bool:
         return self._dock.auto_hide_enabled
+
+    @property
+    def runtime_state(self) -> RuntimeState:
+        return self._dock.runtime_state
+
+    @property
+    def panel_state(self) -> PanelState:
+        return self._dock.panel_state
+
+    @property
+    def dock_side(self) -> DockSide:
+        return self._dock.dock_side
 
     def set_always_on_top(self, enabled: bool) -> None:
         if self._settings.always_on_top == enabled:
@@ -74,6 +91,30 @@ class WindowBehaviorController(QObject):
         self._dock.stop()
         self._resize_save_timer.stop()
         self._persist_sidebar_settings()
+
+    def restore_position(self, prefer_collapsed: bool) -> None:
+        self._dock.restore_position(prefer_collapsed=prefer_collapsed)
+        self._persist_sidebar_settings()
+
+    def expand_panel(self) -> None:
+        self._dock.expand()
+
+    def collapse_panel(self) -> None:
+        self._dock.collapse()
+
+    def set_dock_side(self, side: DockSide) -> None:
+        self._dock.set_dock_side(side)
+        self._persist_sidebar_settings()
+
+    def set_floating(self, floating: bool) -> None:
+        self._dock.set_floating(floating)
+        self._persist_sidebar_settings()
+
+    def start_hover_tracking(self) -> None:
+        self._dock.start()
+
+    def stop_hover_tracking(self) -> None:
+        self._dock.stop()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
         if watched is self._drag_handle:

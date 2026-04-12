@@ -18,8 +18,6 @@ from app.core.clipboard_monitor import ClipboardMonitor
 from app.core.history_store import HistoryStore
 from app.core.models import ClipboardItem
 from app.services.clipboard_service import ClipboardService
-from app.services.settings_service import SettingsService
-from app.ui.behavior import WindowBehaviorController
 from app.ui.history_list import HistoryListWidget
 
 LOGGER = logging.getLogger(__name__)
@@ -34,7 +32,6 @@ class MainWindow(QMainWindow):
         store: HistoryStore,
         service: ClipboardService,
         monitor: ClipboardMonitor,
-        settings_service: SettingsService,
     ) -> None:
         super().__init__()
         self._store = store
@@ -48,38 +45,21 @@ class MainWindow(QMainWindow):
         self._restore_button = QPushButton("Copy selected again", self)
         self._clear_button = QPushButton("Clear", self)
 
-        self._window_behavior = WindowBehaviorController(
-            window=self,
-            drag_handle=self._drag_handle,
-            settings_service=settings_service,
-        )
-
         self._setup_ui()
         self._connect_signals()
         self._refresh_history()
         self._monitor.seed_with_current_clipboard()
-        self._window_behavior.on_ready()
-
-    @property
-    def always_on_top(self) -> bool:
-        return self._window_behavior.always_on_top
-
-    @property
-    def auto_hide_enabled(self) -> bool:
-        return self._window_behavior.auto_hide_enabled
-
-    def set_always_on_top(self, enabled: bool) -> None:
-        self._window_behavior.set_always_on_top(enabled)
-
-    def set_auto_hide_enabled(self, enabled: bool) -> None:
-        self._window_behavior.set_auto_hide_enabled(enabled)
 
     def clear_history(self) -> None:
         self._store.clear()
         self._refresh_history()
 
     def shutdown(self) -> None:
-        self._window_behavior.shutdown()
+        pass
+
+    @property
+    def drag_handle(self) -> QWidget:
+        return self._drag_handle
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         self.close_requested.emit(event)

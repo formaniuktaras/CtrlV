@@ -12,6 +12,7 @@ from app.services.app_lifecycle import AppLifecycleController
 from app.services.clipboard_service import ClipboardService
 from app.services.settings_service import SettingsService
 from app.ui.main_window import MainWindow
+from app.ui.panel import PanelController
 from app.ui.styles import APP_STYLE
 from app.utils.logging_config import configure_logging
 
@@ -38,16 +39,17 @@ def create_application(argv: Sequence[str]) -> QApplication:
         store=store,
         service=service,
         monitor=monitor,
-        settings_service=settings_service,
     )
+    panel_controller = PanelController(window=window, settings_service=settings_service)
 
     tray_settings = settings_service.load_tray_settings()
-    window.set_always_on_top(tray_settings.always_on_top)
-    window.set_auto_hide_enabled(tray_settings.auto_hide_enabled)
+    panel_controller.set_always_on_top(tray_settings.always_on_top)
+    panel_controller.set_auto_hide_enabled(tray_settings.auto_hide_enabled)
 
     lifecycle = AppLifecycleController(
         app=app,
         window=window,
+        panel_controller=panel_controller,
         monitor=monitor,
         settings_service=settings_service,
     )
