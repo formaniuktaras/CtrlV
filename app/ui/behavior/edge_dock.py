@@ -4,9 +4,8 @@ from PySide6.QtCore import QObject, QPoint, QRect, QTimer, Signal
 from PySide6.QtGui import QCursor, QGuiApplication
 from PySide6.QtWidgets import QWidget
 
-from app.services.settings_service import SidebarSettings
+from app.core.sidebar_types import DockSide, PanelState, RuntimeState, SidebarSettings
 from app.ui.behavior.animation import AnimationController, AnimationTarget
-from app.ui.behavior.types import DockSide, PanelState, RuntimeState
 
 
 class EdgeDockController(QObject):

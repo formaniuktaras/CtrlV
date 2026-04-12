@@ -1,33 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from PySide6.QtCore import QSettings
 
-from app.ui.behavior.types import DockSide, PanelState
-
-
-@dataclass(slots=True)
-class SidebarSettings:
-    width: int = 420
-    height: int = 640
-    expanded_x: int = 0
-    expanded_y: int = 120
-    dock_side: DockSide = DockSide.RIGHT
-    panel_state: PanelState = PanelState.EXPANDED
-    visible_edge_px: int = 8
-    auto_hide_enabled: bool = True
-    always_on_top: bool = True
-    reveal_trigger_px: int = 3
-    reveal_vertical_tolerance_px: int = 80
-
-
-@dataclass(slots=True)
-class TraySettings:
-    close_to_tray_enabled: bool = True
-    tray_click_action: str = "toggle_sidebar"
-    always_on_top: bool = True
-    auto_hide_enabled: bool = True
+from app.core.sidebar_types import DockSide, PanelState, SidebarSettings, TraySettings
 
 
 class SettingsService:

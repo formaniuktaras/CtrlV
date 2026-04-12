@@ -6,7 +6,7 @@ from enum import Enum
 from PySide6.QtCore import QObject, Signal
 
 from app.services.settings_service import SettingsService
-from app.ui.behavior.types import DockSide, PanelState, RuntimeState
+from app.core.sidebar_types import DockSide, PanelState, RuntimeState
 from app.ui.behavior.window_controller import WindowBehaviorController
 from app.ui.main_window import MainWindow
 

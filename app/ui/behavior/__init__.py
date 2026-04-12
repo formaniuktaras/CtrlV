@@ -1,3 +1,3 @@
-from app.ui.behavior.window_controller import WindowBehaviorController
+"""Window behavior package."""
 
-__all__ = ["WindowBehaviorController"]
+__all__: list[str] = []
