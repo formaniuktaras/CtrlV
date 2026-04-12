@@ -10,15 +10,15 @@ $targets = @(
     (Join-Path $repoRoot 'release')
 )
 
-Write-Host '==> Cleaning packaging artifacts...'
+Write-Host '==> Cleaning packaging output directories...'
 foreach ($target in $targets) {
     if (Test-Path $target) {
-        Write-Host "   Removing $target"
+        Write-Host "   Removing: $target"
         Remove-Item -Path $target -Recurse -Force
     }
     else {
-        Write-Host "   Skipping missing path: $target"
+        Write-Host "   Not found: $target"
     }
 }
 
-Write-Host '==> Clean completed.'
+Write-Host '==> Clean step completed successfully.'

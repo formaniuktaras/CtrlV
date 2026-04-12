@@ -4,18 +4,21 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '_common.ps1')
 
 $repoRoot = Get-RepoRoot
-$version = Get-Version -RepoRoot $repoRoot
+$meta = Get-AppMetadata -RepoRoot $repoRoot
+$appName = $meta.AppName
+$publisher = $meta.Publisher
+$version = $meta.Version
+
 $portableDir = Join-Path $repoRoot 'dist/CtrlV-portable'
-$portableExe = Join-Path $portableDir 'CtrlV.exe'
+$portableExe = Join-Path $portableDir "$appName.exe"
 $issFile = Join-Path $repoRoot 'packaging/inno/ctrlv_installer.iss'
 $releaseInstallerDir = Join-Path $repoRoot 'release/installer'
-$innoOutputDir = Join-Path $repoRoot 'release/installer'
 $iconPath = Join-Path $repoRoot 'assets/icons/app.ico'
 
-Write-Host "==> Building CtrlV installer (version $version)"
+Write-Host ("==> Building installer package: {0} v{1}" -f $appName, $version)
 
 if (-not (Test-Path $portableExe)) {
-    throw "Portable build not found at $portableExe. Run packaging/scripts/build_portable.ps1 first."
+    throw "Portable executable not found at $portableExe. Run packaging/scripts/build_portable.ps1 first."
 }
 
 if (-not (Test-Path $issFile)) {
@@ -24,33 +27,38 @@ if (-not (Test-Path $issFile)) {
 
 $iscc = Find-Iscc
 if (-not $iscc) {
-    throw "ISCC.exe was not found. Install Inno Setup 6 and ensure ISCC.exe is in PATH or installed in Program Files. Download: https://jrsoftware.org/isdl.php"
+    throw 'ISCC.exe was not found. Install Inno Setup 6 and ensure ISCC.exe is available in PATH or Program Files.'
 }
 
 New-DirectoryIfMissing -Path $releaseInstallerDir
 
 $iconArg = "/DAppIconPath=$iconPath"
 if (-not (Test-Path $iconPath)) {
-    Write-Host "   Icon file not found ($iconPath). Installer will use default icon."
+    Write-Host "   Icon file not found ($iconPath). Using default installer icon."
     $iconArg = '/DAppIconPath='
 }
 
-Write-Host "   Using ISCC: $iscc"
-Write-Host "   Using script: $issFile"
+Write-Host "   ISCC       : $iscc"
+Write-Host "   Script file: $issFile"
 
 $args = @(
-    "/DRepoRoot=$repoRoot",
+    "/DMyAppName=$appName",
+    "/DMyAppPublisher=$publisher",
     "/DMyAppVersion=$version",
+    "/DMyAppExeName=$appName.exe",
     "/DPortableDir=$portableDir",
-    "/DInstallerOutputDir=$innoOutputDir",
+    "/DInstallerOutputDir=$releaseInstallerDir",
     $iconArg,
     $issFile
 )
 
 & $iscc @args
+Assert-CommandSucceeded -CommandName 'Inno Setup (ISCC)'
 
-if ($LASTEXITCODE -ne 0) {
-    throw "Inno Setup build failed with exit code $LASTEXITCODE"
+$expectedInstaller = Join-Path $releaseInstallerDir ("{0}-Setup-{1}-x64.exe" -f $appName, $version)
+if (-not (Test-Path $expectedInstaller)) {
+    throw "Installer build completed but expected artifact is missing: $expectedInstaller"
 }
 
-Write-Host "==> Installer build complete. Output folder: $releaseInstallerDir"
+Write-Host ("==> Installer artifact: {0}" -f $expectedInstaller)
+Write-Host '==> Installer package build completed successfully.'
