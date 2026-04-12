@@ -15,6 +15,8 @@ class EdgeDockController(QObject):
     state_changed = Signal(str)
     dock_side_changed = Signal(str)
     settings_changed = Signal()
+    expand_requested = Signal()
+    collapse_requested = Signal()
 
     def __init__(
         self,
@@ -41,12 +43,12 @@ class EdgeDockController(QObject):
         self._hide_timer = QTimer(self)
         self._hide_timer.setSingleShot(True)
         self._hide_timer.setInterval(hide_delay_ms)
-        self._hide_timer.timeout.connect(self.collapse)
+        self._hide_timer.timeout.connect(self._emit_collapse_requested)
 
         self._reveal_timer = QTimer(self)
         self._reveal_timer.setSingleShot(True)
         self._reveal_timer.setInterval(reveal_delay_ms)
-        self._reveal_timer.timeout.connect(self.expand)
+        self._reveal_timer.timeout.connect(self._emit_expand_requested)
 
         self._hover_poll_timer = QTimer(self)
         self._hover_poll_timer.setInterval(hover_check_ms)
@@ -55,6 +57,10 @@ class EdgeDockController(QObject):
     @property
     def runtime_state(self) -> RuntimeState:
         return self._runtime_state
+
+    @property
+    def dock_side(self) -> DockSide:
+        return self._dock_side
 
     @property
     def panel_state(self) -> PanelState:
@@ -104,6 +110,43 @@ class EdgeDockController(QObject):
         else:
             self._window.move(expanded)
             self._set_runtime_state(RuntimeState.DOCKED_EXPANDED)
+
+    def set_dock_side(self, side: DockSide) -> None:
+        if self._dock_side == side:
+            return
+
+        self._dock_side = side
+        self.dock_side_changed.emit(self._dock_side.value)
+
+        if self._runtime_state == RuntimeState.FLOATING:
+            self.settings_changed.emit()
+            return
+
+        screen = self._active_screen_geometry()
+        expanded = self._expanded_position(screen, self._window.y())
+        self._last_expanded_pos = expanded
+        if self._runtime_state in {RuntimeState.DOCKED_COLLAPSED, RuntimeState.ANIMATING_COLLAPSE}:
+            self._window.move(self._collapsed_position(screen, expanded.y()))
+        else:
+            self._window.move(expanded)
+        self.settings_changed.emit()
+
+    def set_floating(self, floating: bool) -> None:
+        if floating and self._runtime_state == RuntimeState.FLOATING:
+            return
+        if not floating and self._runtime_state != RuntimeState.FLOATING:
+            return
+
+        self._hide_timer.stop()
+        self._reveal_timer.stop()
+        self._animation.stop()
+
+        if floating:
+            self._set_runtime_state(RuntimeState.FLOATING)
+            self.settings_changed.emit()
+            return
+
+        self.snap_to_nearest_edge()
 
     def snap_to_nearest_edge(self) -> None:
         screen = self._active_screen_geometry()
@@ -211,7 +254,7 @@ class EdgeDockController(QObject):
         if hovered_panel:
             self._hide_timer.stop()
             if self._runtime_state == RuntimeState.DOCKED_COLLAPSED:
-                self._request_reveal()
+                self.expand_requested.emit()
             return
 
         if self._runtime_state == RuntimeState.ANIMATING_EXPAND:
@@ -239,6 +282,12 @@ class EdgeDockController(QObject):
         self._hide_timer.stop()
         if not self._reveal_timer.isActive():
             self._reveal_timer.start()
+
+    def _emit_collapse_requested(self) -> None:
+        self.collapse_requested.emit()
+
+    def _emit_expand_requested(self) -> None:
+        self.expand_requested.emit()
 
     def _on_animation_finished(self, target: str) -> None:
         if target == AnimationTarget.EXPAND.value:

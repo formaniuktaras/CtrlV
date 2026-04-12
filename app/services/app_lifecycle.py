@@ -10,6 +10,7 @@ from app.core.clipboard_monitor import ClipboardMonitor
 from app.services.settings_service import SettingsService
 from app.services.tray_service import TrayMenuState, TrayService
 from app.ui.main_window import MainWindow
+from app.ui.panel import PanelController
 
 LOGGER = logging.getLogger(__name__)
 
@@ -21,12 +22,14 @@ class AppLifecycleController(QObject):
         self,
         app: QApplication,
         window: MainWindow,
+        panel_controller: PanelController,
         monitor: ClipboardMonitor,
         settings_service: SettingsService,
     ) -> None:
         super().__init__(window)
         self._app = app
         self._window = window
+        self._panel_controller = panel_controller
         self._monitor = monitor
         self._settings_service = settings_service
 
@@ -46,20 +49,16 @@ class AppLifecycleController(QObject):
             LOGGER.warning("System tray is unavailable. Running without tray integration.")
 
     def show_sidebar(self) -> None:
-        self._window.show()
-        self._window.raise_()
-        self._window.activateWindow()
+        self._panel_controller.show_panel()
         self._sync_tray_menu()
 
     def hide_sidebar(self) -> None:
-        self._window.hide()
+        self._panel_controller.hide_panel()
         self._sync_tray_menu()
 
     def toggle_sidebar(self) -> None:
-        if self._window.isVisible():
-            self.hide_sidebar()
-            return
-        self.show_sidebar()
+        self._panel_controller.toggle_panel()
+        self._sync_tray_menu()
 
     def quit_application(self) -> None:
         if self._quitting:
@@ -68,6 +67,7 @@ class AppLifecycleController(QObject):
         self._quitting = True
         LOGGER.info("Quit requested. Shutting down services.")
 
+        self._panel_controller.shutdown()
         self._window.shutdown()
         self._monitor.shutdown()
         self._settings_service.save_tray_settings(self._tray_settings)
@@ -77,7 +77,7 @@ class AppLifecycleController(QObject):
 
     def _wire_window_signals(self) -> None:
         self._window.close_requested.connect(self._on_window_close_requested)
-        self._window.visibility_changed.connect(lambda _: self._sync_tray_menu())
+        self._panel_controller.visibility_changed.connect(lambda _: self._sync_tray_menu())
 
     def _wire_tray_signals(self) -> None:
         self._tray_service.toggle_sidebar_requested.connect(self.toggle_sidebar)
@@ -104,13 +104,13 @@ class AppLifecycleController(QObject):
         self.hide_sidebar()
 
     def _on_always_on_top_toggled(self, enabled: bool) -> None:
-        self._window.set_always_on_top(enabled)
+        self._panel_controller.set_always_on_top(enabled)
         self._tray_settings.always_on_top = enabled
         self._settings_service.save_tray_settings(self._tray_settings)
         self._sync_tray_menu()
 
     def _on_auto_hide_toggled(self, enabled: bool) -> None:
-        self._window.set_auto_hide_enabled(enabled)
+        self._panel_controller.set_auto_hide_enabled(enabled)
         self._tray_settings.auto_hide_enabled = enabled
         self._settings_service.save_tray_settings(self._tray_settings)
         self._sync_tray_menu()
@@ -121,8 +121,8 @@ class AppLifecycleController(QObject):
 
         self._tray_service.update_menu_state(
             TrayMenuState(
-                sidebar_visible=self._window.isVisible(),
-                always_on_top=self._window.always_on_top,
-                auto_hide_enabled=self._window.auto_hide_enabled,
+                sidebar_visible=self._panel_controller.is_visible,
+                always_on_top=self._panel_controller.always_on_top,
+                auto_hide_enabled=self._panel_controller.auto_hide_enabled,
             )
         )
