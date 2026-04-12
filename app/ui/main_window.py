@@ -17,6 +17,7 @@ from app.core.clipboard_monitor import ClipboardMonitor
 from app.core.history_store import HistoryStore
 from app.core.models import ClipboardItem
 from app.services.clipboard_service import ClipboardService
+from app.services.settings_service import SettingsService
 from app.ui.behavior import WindowBehaviorController
 from app.ui.history_list import HistoryListWidget
 
@@ -24,7 +25,13 @@ LOGGER = logging.getLogger(__name__)
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, store: HistoryStore, service: ClipboardService, monitor: ClipboardMonitor) -> None:
+    def __init__(
+        self,
+        store: HistoryStore,
+        service: ClipboardService,
+        monitor: ClipboardMonitor,
+        settings_service: SettingsService,
+    ) -> None:
         super().__init__()
         self._store = store
         self._service = service
@@ -37,7 +44,11 @@ class MainWindow(QMainWindow):
         self._restore_button = QPushButton("Copy selected again", self)
         self._clear_button = QPushButton("Clear", self)
 
-        self._window_behavior = WindowBehaviorController(window=self, drag_handle=self._drag_handle)
+        self._window_behavior = WindowBehaviorController(
+            window=self,
+            drag_handle=self._drag_handle,
+            settings_service=settings_service,
+        )
 
         self._setup_ui()
         self._connect_signals()
@@ -46,7 +57,6 @@ class MainWindow(QMainWindow):
         self._window_behavior.on_ready()
 
     def _setup_ui(self) -> None:
-        self.resize(420, 640)
         self.setMinimumWidth(340)
 
         central = QWidget(self)
