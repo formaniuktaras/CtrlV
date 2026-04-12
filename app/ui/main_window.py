@@ -17,6 +17,7 @@ from app.core.clipboard_monitor import ClipboardMonitor
 from app.core.history_store import HistoryStore
 from app.core.models import ClipboardItem
 from app.services.clipboard_service import ClipboardService
+from app.ui.behavior import WindowBehaviorController
 from app.ui.history_list import HistoryListWidget
 
 LOGGER = logging.getLogger(__name__)
@@ -29,32 +30,45 @@ class MainWindow(QMainWindow):
         self._service = service
         self._monitor = monitor
 
+        self._drag_handle = QWidget(self)
         self._history_list = HistoryListWidget(self)
         self._status_label = QLabel(self)
         self._status_label.setObjectName("metaLabel")
         self._restore_button = QPushButton("Copy selected again", self)
         self._clear_button = QPushButton("Clear", self)
 
+        self._window_behavior = WindowBehaviorController(window=self, drag_handle=self._drag_handle)
+
         self._setup_ui()
         self._connect_signals()
         self._refresh_history()
         self._monitor.seed_with_current_clipboard()
+        self._window_behavior.on_ready()
 
     def _setup_ui(self) -> None:
-        self.setWindowTitle("CtrlV - Clipboard Sidebar")
         self.resize(420, 640)
         self.setMinimumWidth(340)
-        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
 
         central = QWidget(self)
         layout = QVBoxLayout(central)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(8)
 
+        handle_layout = QHBoxLayout(self._drag_handle)
+        handle_layout.setContentsMargins(0, 0, 0, 0)
+        handle_layout.setSpacing(8)
+        title = QLabel("CtrlV Clipboard", self._drag_handle)
+        title.setObjectName("metaLabel")
+        title.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        handle_layout.addWidget(title)
+        self._drag_handle.setCursor(Qt.CursorShape.SizeAllCursor)
+        self._drag_handle.setFixedHeight(20)
+
         button_row = QHBoxLayout()
         button_row.addWidget(self._restore_button)
         button_row.addWidget(self._clear_button)
 
+        layout.addWidget(self._drag_handle)
         layout.addLayout(button_row)
         layout.addWidget(self._history_list, stretch=1)
         layout.addWidget(self._status_label)
