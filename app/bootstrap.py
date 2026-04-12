@@ -19,6 +19,7 @@ from app.services.single_instance_service import SingleInstanceService
 from app.ui.main_window import MainWindow
 from app.version import APP_NAME, VERSION
 from app.ui.panel import PanelController
+from app.ui.settings import SettingsController
 from app.ui.styles import APP_STYLE
 from app.utils.logging_config import configure_logging
 
@@ -62,6 +63,13 @@ def create_application(argv: Sequence[str]) -> QApplication:
     panel_controller.set_always_on_top(tray_settings.always_on_top)
     panel_controller.set_auto_hide_enabled(tray_settings.auto_hide_enabled)
 
+    settings_controller = SettingsController(
+        settings_service=settings_service,
+        panel_controller=panel_controller,
+        autostart_service=autostart_service,
+        parent=window,
+    )
+
     lifecycle = AppLifecycleController(
         app=app,
         window=window,
@@ -69,6 +77,7 @@ def create_application(argv: Sequence[str]) -> QApplication:
         monitor=monitor,
         settings_service=settings_service,
         autostart_service=autostart_service,
+        settings_controller=settings_controller,
         start_minimized=start_minimized,
     )
     app._lifecycle = lifecycle  # type: ignore[attr-defined]
