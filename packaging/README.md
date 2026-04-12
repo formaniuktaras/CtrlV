@@ -96,9 +96,13 @@ The installer is per-user and does not require admin privileges.
 - Default install directory: `%LOCALAPPDATA%\Programs\CtrlV`
 - Start Menu shortcut: yes
 - Optional desktop shortcut: yes
+- Optional autostart task (per-user Startup shortcut): yes
 - Uninstall entry: yes
 - Launch app after install: optional checkbox
 - User settings cleanup on uninstall: not performed by default
+
+Autostart integration uses a single startup mechanism: `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\CtrlV.lnk` with `--startup` argument.
+The same artifact is used by both installer task and runtime tray toggle to keep behavior predictable.
 
 ## Icon wiring
 
