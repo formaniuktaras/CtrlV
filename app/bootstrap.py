@@ -12,6 +12,7 @@ from app.services.app_lifecycle import AppLifecycleController
 from app.services.clipboard_service import ClipboardService
 from app.services.settings_service import SettingsService
 from app.ui.main_window import MainWindow
+from app.version import APP_NAME, VERSION
 from app.ui.panel import PanelController
 from app.ui.styles import APP_STYLE
 from app.utils.logging_config import configure_logging
@@ -21,11 +22,12 @@ LOGGER = logging.getLogger(__name__)
 
 def create_application(argv: Sequence[str]) -> QApplication:
     configure_logging()
-    LOGGER.info("Starting CtrlV application")
+    LOGGER.info("Starting %s application v%s", APP_NAME, VERSION)
 
     app = QApplication(list(argv))
-    app.setApplicationName("CtrlV")
-    app.setOrganizationName("CtrlV")
+    app.setApplicationName(APP_NAME)
+    app.setOrganizationName(APP_NAME)
+    app.setApplicationVersion(VERSION)
     app.setStyleSheet(APP_STYLE)
 
     clipboard = app.clipboard()
