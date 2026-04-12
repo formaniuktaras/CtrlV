@@ -1,70 +1,100 @@
 # CtrlV
 
-CtrlV is a Windows desktop clipboard utility built with Python and PySide6. It runs as a sidebar panel, tracks clipboard history, and stays accessible from the system tray.
+CtrlV — lightweight clipboard manager for Windows with a docked sidebar and system tray control.
+It keeps your recent copied items close at hand and helps you quickly copy any item back to the clipboard.
 
-The current project state is focused on a stable local desktop workflow and packaging for distribution to other users.
+## Key Features
 
-## Who this app is for
+- Clipboard history for text, images, and file lists.
+- Sidebar panel that docks to the left or right screen edge.
+- Collapsed edge state to keep the panel out of the way.
+- Auto-hide with reveal on mouse hover near the screen edge.
+- System tray control for quick show/hide and app actions.
+- Launch at Windows startup (toggle from tray menu).
+- Restore copied items back to the clipboard in one action.
+- Single-instance behavior (opening CtrlV again focuses the running app).
 
-- users who copy/paste frequently and need quick access to recent clipboard items;
-- users who prefer a docked sidebar instead of a full window application;
-- developers/maintainers who want a small, readable PySide6 desktop codebase.
+## How It Works (UX)
 
-## User overview
+CtrlV is primarily a tray app.
 
-CtrlV starts as a frameless sidebar window and monitors clipboard changes.
+- After launch, CtrlV runs in the system tray and manages a sidebar panel.
+- It is not a traditional “open once, keep centered window” desktop app.
+- You can open the sidebar by:
+  - clicking the tray icon;
+  - moving the mouse to the docked edge (when auto-hide is enabled).
+- Closing the sidebar window does not terminate CtrlV; it hides to tray.
+- To fully exit, use **Quit** from the tray menu.
+- If started with startup mode, CtrlV opens minimized to tray and waits for interaction.
 
-- Select an item in history and copy it back to clipboard.
-- Hide/show the panel from the tray icon.
-- Keep panel docked left/right or switch to floating mode.
-- Use auto-hide and hover reveal for a compact desktop footprint.
-- Collapse/expand the docked panel.
-- Keep behavior preferences across restarts via persisted settings.
+## Screenshots
 
-## Implemented features (current status)
+This repository does not include final product screenshots yet.
+When screenshots are added, this section will show:
 
-- Clipboard monitoring via `QClipboard`
-- Clipboard history list with duplicate prevention and item limit
-- History item types: text, image, files, unknown fallback
-- Sidebar panel UI
-- Docking behavior (left/right) and floating mode
-- Collapse/expand behavior
-- Auto-hide/reveal behavior near screen edge
-- Tray integration (toggle panel, clear history, quit, always-on-top, auto-hide)
-- Tray autostart toggle (`Launch at Windows startup`) synchronized with real Windows startup state
-- Settings persistence (`QSettings`) for sidebar/tray behavior
-- Single-instance protection (second launch activates the existing instance)
-- Startup/login behavior (`--startup`) to open in tray-first mode
-- Windows packaging layer:
-  - PyInstaller spec (`onedir` portable build)
-  - Inno Setup installer
-  - PowerShell build scripts
-  - Packaging documentation
+- Sidebar in expanded state with clipboard history.
+- Sidebar in collapsed edge state.
+- System tray context menu with controls.
 
-## Limitations and not-yet-implemented items
+## Installation
 
-This repository intentionally does **not** include the following yet:
+### Option 1 — Installer
 
-- global hotkeys;
-- full-text search over history;
-- pinned/favorite items;
-- persistent SQLite clipboard history database;
-- auto-updater;
-- telemetry/analytics;
-- cloud sync;
-- code signing;
-- CI/CD release automation;
-- alternative package channels (MSI/winget/scoop).
+1. Download the latest `CtrlV-Setup-<version>-x64.exe` from releases.
+2. Run the installer and complete setup.
+3. Start CtrlV from the Start Menu or desktop shortcut.
+4. After launch, look for the CtrlV icon in the system tray.
 
-## Autostart and tray lifecycle
+### Option 2 — Portable
 
-- Autostart is implemented with one mechanism: a per-user shortcut in `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`.
-- Users can toggle it from tray menu: **Launch at Windows startup**.
-- `X` (close button) hides to tray; tray **Quit** fully exits the app and runs service cleanup.
-- When launched by startup shortcut (`--startup`), CtrlV starts hidden and stays in tray until opened.
-- On first run, CtrlV shows a one-time tray hint: "CtrlV is running in the system tray."
+1. Download the portable archive/folder build.
+2. Extract it to any local folder.
+3. Run the CtrlV executable.
+4. CtrlV starts and becomes available from the tray.
 
-## Run from source (developer quick start)
+## Basic Usage
+
+1. Copy any text, image, or files in Windows as usual (`Ctrl+C`).
+2. Open CtrlV sidebar from tray click or edge hover reveal.
+3. Select an item in history.
+4. Click **Copy selected again** (or double-click the item).
+5. Paste it in your target app (`Ctrl+V`).
+
+Auto-hide behavior:
+
+- With **Auto-hide** enabled, the sidebar can collapse to a thin edge strip.
+- Hover near the docked edge to reveal it.
+- Disable **Auto-hide** in tray menu if you prefer a stable expanded panel.
+
+## Settings / Control
+
+Most runtime controls are available from the tray menu:
+
+- **Show sidebar / Hide sidebar**
+- **Always on top** toggle
+- **Auto-hide** toggle
+- **Launch at Windows startup** toggle
+- **Clear history**
+- **Quit**
+
+CtrlV also remembers key UI preferences between launches:
+
+- dock side (left/right),
+- panel size and position,
+- collapsed/expanded state,
+- auto-hide and always-on-top state.
+
+## Troubleshooting
+
+- **Sidebar does not open:** check that CtrlV is running in the system tray, then click the tray icon.
+- **App seems “closed” after pressing X:** this is expected; CtrlV hides to tray. Use tray icon to reopen.
+- **Does not start with Windows:** open tray menu and verify **Launch at Windows startup** is enabled.
+- **Second launch does nothing:** CtrlV allows only one running instance; interact with the existing tray app.
+- **Need logs for debugging:** current logging is console/stdout-based in runtime; no dedicated log file is configured by default.
+
+## Development
+
+Run from source (PowerShell):
 
 ```powershell
 python -m venv .venv
@@ -73,78 +103,61 @@ pip install -r requirements.txt
 python -m app.main
 ```
 
-## Build and installation overview
+Useful launch arguments:
 
-Packaging tools live under `packaging/`.
+- `--startup` — start minimized to tray (used by autostart shortcut).
+- `--minimized` — start minimized behavior for manual testing.
 
-### Build portable package
+## Build / Packaging
 
-```powershell
-./packaging/scripts/build_portable.ps1
-```
+CtrlV uses:
 
-Result:
+- **PyInstaller** for Windows executable packaging.
+- **Inno Setup** for installer creation.
+- **PowerShell scripts** for repeatable build steps.
 
-- `release/portable/CtrlV-<version>-portable/`
+Main packaging assets:
 
-### Build installer
+- `packaging/pyinstaller/ctrlv.spec`
+- `packaging/inno/ctrlv_installer.iss`
+- `packaging/scripts/build_portable.ps1`
+- `packaging/scripts/build_installer.ps1`
+- `packaging/scripts/build_all.ps1`
 
-```powershell
-./packaging/scripts/build_installer.ps1
-```
+Detailed packaging notes are available in `packaging/README.md`.
 
-Result:
-
-- `release/installer/CtrlV-Setup-<version>-x64.exe`
-
-### Build full release pipeline
-
-```powershell
-./packaging/scripts/build_all.ps1
-```
-
-For detailed packaging flow, see `packaging/README.md`.
-
-## Release artifacts (expected)
-
-Example for version `0.1.0`:
-
-- `release/portable/CtrlV-0.1.0-portable/`
-- `release/installer/CtrlV-Setup-0.1.0-x64.exe`
-
-## Project structure
+## Project Structure
 
 ```text
-app/
-  main.py
-  bootstrap.py
-  version.py
-  core/
-  services/
-  ui/
-  utils/
-assets/
-  icons/
-packaging/
-  pyinstaller/
-  inno/
-  scripts/
-  templates/
+app/          # application source code
+  core/       # clipboard parsing, models, history storage
+  services/   # tray, autostart, app lifecycle, settings
+  ui/         # main window, sidebar behavior, panel controller
+  utils/      # helpers and logging setup
+assets/       # icons and static resources
+packaging/    # PyInstaller, Inno Setup, release scripts
 ```
 
-## Versioning
+## Current Status
 
-Application name/publisher/version are defined in one place:
+Implemented:
 
-- `app/version.py`
+- system tray lifecycle and menu controls,
+- docked sidebar panel (left/right),
+- collapsed edge mode and hover reveal,
+- clipboard history with restore-to-clipboard action,
+- launch at Windows startup toggle,
+- persisted UI/tray settings,
+- single-instance protection.
 
-Packaging scripts read this file to keep artifact names and installer metadata consistent.
+Not implemented yet:
 
-## License status
+- history search,
+- pinned/favorite items,
+- global hotkeys,
+- persistent history database,
+- auto-updater.
 
-Current repository license status is defined in `LICENSE`.
-At this stage, no open-source license grant is provided yet.
+## License
 
-## Changelog
-
-Release notes are tracked in `CHANGELOG.md`.
+License terms are provided in `LICENSE`.
