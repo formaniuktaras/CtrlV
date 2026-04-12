@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 LOGGER = logging.getLogger(__name__)
@@ -20,6 +20,8 @@ class AutostartService:
     app_name: str
     executable_path: Path
     startup_argument: str = "--startup"
+    _startup_dir: Path = field(init=False, repr=False)
+    _shortcut_path: Path = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         self._startup_dir = Path(os.environ.get("APPDATA", "")) / "Microsoft/Windows/Start Menu/Programs/Startup"
