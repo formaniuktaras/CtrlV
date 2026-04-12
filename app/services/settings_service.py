@@ -30,6 +30,8 @@ class SettingsService:
             always_on_top=self._bool("sidebar/always_on_top", True),
             reveal_trigger_px=max(1, self._int("sidebar/reveal_trigger_px", 3)),
             reveal_vertical_tolerance_px=max(0, self._int("sidebar/reveal_vertical_tolerance_px", 80)),
+            hide_delay_ms=max(0, self._int("sidebar/hide_delay_ms", 450)),
+            reveal_on_hover_enabled=self._bool("sidebar/reveal_on_hover_enabled", True),
         )
 
     def save_sidebar_settings(self, state: SidebarSettings) -> None:
@@ -44,6 +46,8 @@ class SettingsService:
         self._settings.setValue("sidebar/always_on_top", state.always_on_top)
         self._settings.setValue("sidebar/reveal_trigger_px", state.reveal_trigger_px)
         self._settings.setValue("sidebar/reveal_vertical_tolerance_px", state.reveal_vertical_tolerance_px)
+        self._settings.setValue("sidebar/hide_delay_ms", state.hide_delay_ms)
+        self._settings.setValue("sidebar/reveal_on_hover_enabled", state.reveal_on_hover_enabled)
         self._settings.sync()
 
     def load_tray_settings(self) -> TraySettings:
@@ -69,6 +73,13 @@ class SettingsService:
         self._settings.sync()
 
     def flush(self) -> None:
+        self._settings.sync()
+
+    def load_start_minimized_to_tray(self) -> bool:
+        return self._bool("app/start_minimized_to_tray", False)
+
+    def save_start_minimized_to_tray(self, enabled: bool) -> None:
+        self._settings.setValue("app/start_minimized_to_tray", enabled)
         self._settings.sync()
 
     def _int(self, key: str, default: int) -> int:

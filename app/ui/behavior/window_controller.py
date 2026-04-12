@@ -70,6 +70,14 @@ class WindowBehaviorController(QObject):
     def dock_side(self) -> DockSide:
         return self._dock.dock_side
 
+    @property
+    def hide_delay_ms(self) -> int:
+        return self._settings.hide_delay_ms
+
+    @property
+    def reveal_on_hover_enabled(self) -> bool:
+        return self._settings.reveal_on_hover_enabled
+
     def set_always_on_top(self, enabled: bool) -> None:
         if self._settings.always_on_top == enabled:
             return
@@ -87,6 +95,20 @@ class WindowBehaviorController(QObject):
     def set_auto_hide_enabled(self, enabled: bool) -> None:
         self._dock.set_auto_hide_enabled(enabled)
 
+    def set_hide_delay_ms(self, delay_ms: int) -> None:
+        self._dock.set_hide_delay_ms(delay_ms)
+
+    def set_reveal_on_hover_enabled(self, enabled: bool) -> None:
+        self._dock.set_reveal_on_hover_enabled(enabled)
+
+    def set_panel_width(self, width: int) -> None:
+        normalized = max(self._window.minimumWidth(), width)
+        if self._window.width() == normalized:
+            return
+        self._window.resize(normalized, self._window.height())
+        self._dock.handle_resize()
+        self._persist_sidebar_settings()
+
     def on_ready(self) -> None:
         self._dock.restore_position(prefer_collapsed=self._settings.panel_state == PanelState.COLLAPSED)
         self._dock.start()
@@ -99,6 +121,16 @@ class WindowBehaviorController(QObject):
 
     def restore_position(self, prefer_collapsed: bool) -> None:
         self._dock.restore_position(prefer_collapsed=prefer_collapsed)
+        self._persist_sidebar_settings()
+
+    def reset_position_state(self) -> None:
+        self._settings.width = 420
+        self._settings.height = 640
+        self._settings.expanded_y = 120
+        self._settings.panel_state = PanelState.EXPANDED
+        self._window.resize(self._settings.width, self._settings.height)
+        self._dock.apply_settings(self._settings)
+        self._dock.restore_position(prefer_collapsed=False)
         self._persist_sidebar_settings()
 
     def expand_panel(self) -> None:

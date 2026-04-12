@@ -36,7 +36,6 @@ def create_application(argv: Sequence[str]) -> QApplication:
     app.setStyleSheet(APP_STYLE)
 
     args = set(argv[1:])
-    start_minimized = "--startup" in args or "--minimized" in args
 
     single_instance = SingleInstanceService(server_name=f"{APP_NAME}_single_instance", parent=app)
     if not single_instance.try_acquire_primary():
@@ -49,6 +48,7 @@ def create_application(argv: Sequence[str]) -> QApplication:
     service = ClipboardService(clipboard=clipboard)
     monitor = ClipboardMonitor(clipboard=clipboard, parser=parser, store=store)
     settings_service = SettingsService()
+    start_minimized = "--startup" in args or "--minimized" in args or settings_service.load_start_minimized_to_tray()
     autostart_service = AutostartService(app_name=APP_NAME, executable_path=_runtime_executable_path())
 
     window = MainWindow(
