@@ -3,13 +3,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_submodules
-
 project_root = Path(__file__).resolve().parents[2]
-app_entry = project_root / "app" / "main.py"
-icon_path = project_root / "assets" / "icons" / "app.ico"
+app_entry = project_root / 'app' / 'main.py'
+icon_path = project_root / 'assets' / 'icons' / 'app.ico'
 
-hiddenimports = collect_submodules("PySide6") + ["shiboken6"]
+hiddenimports = [
+    'PySide6.QtCore',
+    'PySide6.QtGui',
+    'PySide6.QtWidgets',
+    'shiboken6',
+]
 
 analysis = Analysis(
     [str(app_entry)],
@@ -21,13 +24,18 @@ analysis = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        "PyQt5",
-        "PyQt6",
-        "PySide2",
+        'PyQt5',
+        'PyQt6',
+        'PySide2',
+        'tkinter',
+        'unittest',
+        'pytest',
+        'pydoc',
     ],
     noarchive=False,
     optimize=0,
 )
+
 pyz = PYZ(analysis.pure)
 
 exe = EXE(
@@ -35,7 +43,7 @@ exe = EXE(
     analysis.scripts,
     [],
     exclude_binaries=True,
-    name="CtrlV",
+    name='CtrlV',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -56,5 +64,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="CtrlV-portable",
+    name='CtrlV-portable',
 )

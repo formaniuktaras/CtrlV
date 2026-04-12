@@ -1,119 +1,110 @@
-# CtrlV Packaging (Windows)
+# Packaging and Release (Windows)
 
-This folder contains production-oriented packaging assets for Windows 10/11:
+This directory contains the release workflow for CtrlV on Windows: building a portable package with PyInstaller and creating a user installer with Inno Setup.
 
-- PyInstaller `onedir` portable build (primary distribution format).
-- Inno Setup installer build based on portable output.
-- PowerShell build scripts with predictable artifact layout.
+## Scope
 
-## Structure
+The packaging layer is responsible for:
 
-```text
-packaging/
-  README.md
-  pyinstaller/
-    ctrlv.spec
-  inno/
-    ctrlv_installer.iss
-  scripts/
-    _common.ps1
-    clean.ps1
-    build_portable.ps1
-    build_installer.ps1
-    build_all.ps1
-  templates/
-    portable_README.txt
-```
+- producing release artifacts for end users;
+- keeping artifact names/versioning consistent;
+- using one version source (`app/version.py`);
+- preserving a predictable output layout under `release/`.
 
 ## Prerequisites
 
 - Windows 10/11 x64
 - Python 3.12+
-- Virtual environment with dependencies:
-  - `pip install -r requirements.txt`
-  - `pip install -r packaging/requirements-build.txt`
-- Inno Setup 6 (for installer build):
-  - Download: https://jrsoftware.org/isdl.php
+- Project dependencies installed:
 
-## Version source of truth
+```powershell
+pip install -r requirements.txt
+pip install -r packaging/requirements-build.txt
+```
 
-Version is defined in a single place:
+- Inno Setup 6 installed for installer builds (`ISCC.exe` in PATH or default Program Files location)
 
-- `app/version.py` (`VERSION = "..."`)
+## Source of truth for name/version
 
-Packaging scripts read this value and pass it into artifact names and installer metadata.
+Packaging reads metadata from `app/version.py`:
+
+- `APP_NAME`
+- `PUBLISHER`
+- `VERSION`
+
+Scripts pass these values into PyInstaller and Inno Setup build steps.
 
 ## Build commands
 
 Run from repository root in PowerShell.
 
-### Clean packaging outputs
+### 1) Clean previous outputs
 
 ```powershell
 ./packaging/scripts/clean.ps1
 ```
 
-Removes:
-
-- `build/`
-- `dist/`
-- `release/`
-
-### Build portable (PyInstaller onedir)
+### 2) Build portable package
 
 ```powershell
 ./packaging/scripts/build_portable.ps1
 ```
 
-Outputs:
+Produces:
 
-- `dist/CtrlV-portable/`
-- `release/portable/CtrlV-portable-<version>/`
+- `dist/CtrlV-portable/` (PyInstaller output)
+- `release/portable/CtrlV-<version>-portable/` (release-ready copy)
 
-Portable directory contains:
-
-- `CtrlV.exe`
-- runtime files
-- `VERSION.txt`
-- `README.txt`
-
-### Build installer (Inno Setup)
+### 3) Build installer
 
 ```powershell
 ./packaging/scripts/build_installer.ps1
 ```
 
-Requires existing `dist/CtrlV-portable/CtrlV.exe`.
+Requires `dist/CtrlV-portable/CtrlV.exe` from the portable step.
 
-Outputs:
+Produces:
 
-- `release/installer/CtrlV-setup-<version>-x64.exe`
+- `release/installer/CtrlV-Setup-<version>-x64.exe`
 
-### Build all
+### 4) Run full pipeline
 
 ```powershell
 ./packaging/scripts/build_all.ps1
 ```
 
-Pipeline:
+Runs `clean -> build_portable -> build_installer`.
 
-1. Clean
-2. Build portable
-3. Build installer
+## Release output layout
+
+```text
+release/
+  portable/
+    CtrlV-<version>-portable/
+      CtrlV.exe
+      README.txt
+      VERSION.txt
+      ...runtime files...
+  installer/
+    CtrlV-Setup-<version>-x64.exe
+```
 
 ## Installer behavior
 
-- Installs to `{localappdata}\Programs\CtrlV` (per-user, no admin required).
-- Creates Start Menu shortcut.
-- Optional desktop shortcut.
-- Registers uninstall entry.
-- Offers "Launch CtrlV" after install.
-- Does **not** remove user profile settings by default.
+The installer is per-user and does not require admin privileges.
 
-## Icon handling
+- Default install directory: `%LOCALAPPDATA%\Programs\CtrlV`
+- Start Menu shortcut: yes
+- Optional desktop shortcut: yes
+- Uninstall entry: yes
+- Launch app after install: optional checkbox
+- User settings cleanup on uninstall: not performed by default
 
-Place icon at:
+## Icon wiring
+
+Place app icon at:
 
 - `assets/icons/app.ico`
 
-If missing, both portable and installer builds still work with default icons.
+If this file exists, both PyInstaller and Inno Setup use it automatically.
+If it is missing, builds still succeed with default icons.

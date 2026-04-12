@@ -1,6 +1,14 @@
-#define MyAppName "CtrlV"
-#define MyAppPublisher "CtrlV Team"
-#define MyAppExeName "CtrlV.exe"
+#ifndef MyAppName
+  #define MyAppName "CtrlV"
+#endif
+
+#ifndef MyAppPublisher
+  #define MyAppPublisher "CtrlV Team"
+#endif
+
+#ifndef MyAppExeName
+  #define MyAppExeName "CtrlV.exe"
+#endif
 
 #ifndef MyAppVersion
   #define MyAppVersion "0.0.0-dev"
@@ -26,12 +34,13 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={localappdata}\Programs\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
+UninstallDisplayName={#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
 OutputDir={#InstallerOutputDir}
-OutputBaseFilename=CtrlV-setup-{#MyAppVersion}-x64
+OutputBaseFilename={#MyAppName}-Setup-{#MyAppVersion}-x64
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -58,5 +67,5 @@ Name: "{autodesktop}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; Tasks: 
 Filename: "{app}\\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-; Optional future cleanup example (disabled intentionally):
+; User settings are preserved intentionally.
 ; Type: filesandordirs; Name: "{localappdata}\\CtrlV"
