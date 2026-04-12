@@ -34,6 +34,7 @@ class EdgeDockController(QObject):
         self._edge_trigger_px = 3
         self._reveal_vertical_tolerance_px = 80
         self._auto_hide_enabled = True
+        self._reveal_on_hover_enabled = True
 
         self._dock_side = DockSide.RIGHT
         self._runtime_state = RuntimeState.FLOATING
@@ -73,6 +74,8 @@ class EdgeDockController(QObject):
         self._edge_trigger_px = max(1, settings.reveal_trigger_px)
         self._reveal_vertical_tolerance_px = max(0, settings.reveal_vertical_tolerance_px)
         self._auto_hide_enabled = settings.auto_hide_enabled
+        self._hide_timer.setInterval(max(0, settings.hide_delay_ms))
+        self._reveal_on_hover_enabled = settings.reveal_on_hover_enabled
         self._last_expanded_pos = QPoint(settings.expanded_x, settings.expanded_y)
 
     @property
@@ -87,6 +90,21 @@ class EdgeDockController(QObject):
         if not enabled and self._runtime_state == RuntimeState.DOCKED_COLLAPSED:
             self.expand()
 
+        self.settings_changed.emit()
+
+    def set_hide_delay_ms(self, delay_ms: int) -> None:
+        normalized = max(0, delay_ms)
+        if self._hide_timer.interval() == normalized:
+            return
+        self._hide_timer.setInterval(normalized)
+        self.settings_changed.emit()
+
+    def set_reveal_on_hover_enabled(self, enabled: bool) -> None:
+        if self._reveal_on_hover_enabled == enabled:
+            return
+        self._reveal_on_hover_enabled = enabled
+        if not enabled:
+            self._reveal_timer.stop()
         self.settings_changed.emit()
 
     def start(self) -> None:
@@ -240,6 +258,8 @@ class EdgeDockController(QObject):
             always_on_top=True,
             reveal_trigger_px=self._edge_trigger_px,
             reveal_vertical_tolerance_px=self._reveal_vertical_tolerance_px,
+            hide_delay_ms=self._hide_timer.interval(),
+            reveal_on_hover_enabled=self._reveal_on_hover_enabled,
         )
 
     def _update_hover_state(self) -> None:
@@ -268,6 +288,9 @@ class EdgeDockController(QObject):
             return
 
         if self._runtime_state == RuntimeState.DOCKED_COLLAPSED:
+            if not self._reveal_on_hover_enabled:
+                self._reveal_timer.stop()
+                return
             self._request_reveal() if self._cursor_hits_reveal_zone(cursor) else self._reveal_timer.stop()
 
     def _request_collapse(self) -> None:

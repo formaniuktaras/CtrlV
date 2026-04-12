@@ -72,6 +72,22 @@ class PanelController(QObject):
         return self._behavior.auto_hide_enabled
 
     @property
+    def dock_side(self) -> DockSide:
+        return self._behavior.dock_side
+
+    @property
+    def panel_width(self) -> int:
+        return self._window.width()
+
+    @property
+    def hide_delay_ms(self) -> int:
+        return self._behavior.hide_delay_ms
+
+    @property
+    def reveal_on_hover_enabled(self) -> bool:
+        return self._behavior.reveal_on_hover_enabled
+
+    @property
     def is_visible(self) -> bool:
         return self._window.isVisible()
 
@@ -180,6 +196,23 @@ class PanelController(QObject):
         self._behavior.set_auto_hide_enabled(enabled)
         if not enabled:
             self.expand_panel()
+        self._sync_state()
+
+    def set_hide_delay_ms(self, delay_ms: int) -> None:
+        self._behavior.set_hide_delay_ms(delay_ms)
+        self._sync_state()
+
+    def set_reveal_on_hover_enabled(self, enabled: bool) -> None:
+        self._behavior.set_reveal_on_hover_enabled(enabled)
+        self._sync_state()
+
+    def set_panel_width(self, width: int) -> None:
+        self._behavior.set_panel_width(width)
+        self._sync_state()
+
+    def reset_position_state(self) -> None:
+        self._behavior.reset_position_state()
+        self.expand_panel()
         self._sync_state()
 
     def shutdown(self) -> None:

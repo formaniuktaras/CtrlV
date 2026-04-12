@@ -12,6 +12,7 @@ from app.services.settings_service import SettingsService
 from app.services.tray_service import TrayMenuState, TrayService
 from app.ui.main_window import MainWindow
 from app.ui.panel import PanelController
+from app.ui.settings import SettingsController, SettingsWindow
 
 LOGGER = logging.getLogger(__name__)
 
@@ -42,9 +43,17 @@ class AppLifecycleController(QObject):
         self._tray_service = TrayService(parent_widget=self._window)
         self._tray_enabled = self._tray_service.initialize()
         self._quitting = False
+        self._settings_controller = SettingsController(
+            settings_service=self._settings_service,
+            panel_controller=self._panel_controller,
+            autostart_service=self._autostart_service,
+            parent=self,
+        )
+        self._settings_window = SettingsWindow(controller=self._settings_controller, parent=self._window)
 
         self._wire_window_signals()
         self._wire_tray_signals()
+        self._wire_settings_signals()
 
         self._app.setQuitOnLastWindowClosed(not self._tray_enabled)
 
@@ -96,11 +105,16 @@ class AppLifecycleController(QObject):
     def _wire_tray_signals(self) -> None:
         self._tray_service.toggle_sidebar_requested.connect(self.toggle_sidebar)
         self._tray_service.clear_history_requested.connect(self._window.clear_history)
+        self._tray_service.settings_requested.connect(self._open_settings_window)
         self._tray_service.quit_requested.connect(self.quit_application)
         self._tray_service.always_on_top_toggled.connect(self._on_always_on_top_toggled)
         self._tray_service.auto_hide_toggled.connect(self._on_auto_hide_toggled)
         self._tray_service.autostart_toggled.connect(self._on_autostart_toggled)
         self._tray_service.menu_opening.connect(self._sync_autostart_menu)
+
+    def _wire_settings_signals(self) -> None:
+        self._settings_controller.state_changed.connect(lambda _: self._on_settings_state_changed())
+        self._settings_controller.save_failed.connect(self._on_settings_save_failed)
 
     def _on_window_close_requested(self, event: object) -> None:
         close_event = event if isinstance(event, QCloseEvent) else None
@@ -160,6 +174,20 @@ class AppLifecycleController(QObject):
             QMessageBox.warning(self._window, "Autostart error", str(exc))
         finally:
             self._sync_autostart_menu()
+
+    def _open_settings_window(self) -> None:
+        self._settings_window.open_and_sync()
+
+    def _on_settings_state_changed(self) -> None:
+        self._tray_settings.always_on_top = self._panel_controller.always_on_top
+        self._tray_settings.auto_hide_enabled = self._panel_controller.auto_hide_enabled
+        self._settings_service.save_tray_settings(self._tray_settings)
+        self._sync_tray_menu()
+        self._sync_autostart_menu()
+
+    def _on_settings_save_failed(self, message: str) -> None:
+        self._tray_service.show_message("CtrlV", f"Settings update failed: {message}", timeout_ms=4000)
+        QMessageBox.warning(self._window, "Settings error", message)
 
     def _show_first_run_hint_if_needed(self) -> None:
         if not self._settings_service.is_first_run():

@@ -36,6 +36,8 @@ class SidebarSettings:
     always_on_top: bool = True
     reveal_trigger_px: int = 3
     reveal_vertical_tolerance_px: int = 80
+    hide_delay_ms: int = 450
+    reveal_on_hover_enabled: bool = True
 
 
 @dataclass(slots=True)

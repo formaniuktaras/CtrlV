@@ -19,6 +19,7 @@ class TrayService(QObject):
 
     toggle_sidebar_requested = Signal()
     clear_history_requested = Signal()
+    settings_requested = Signal()
     quit_requested = Signal()
     always_on_top_toggled = Signal(bool)
     auto_hide_toggled = Signal(bool)
@@ -37,6 +38,7 @@ class TrayService(QObject):
         self._always_on_top_action: QAction | None = None
         self._auto_hide_action: QAction | None = None
         self._clear_history_action: QAction | None = None
+        self._settings_action: QAction | None = None
         self._autostart_action: QAction | None = None
         self._quit_action: QAction | None = None
 
@@ -72,6 +74,11 @@ class TrayService(QObject):
         self._autostart_action = menu.addAction("Launch at Windows startup")
         self._autostart_action.setCheckable(True)
         self._autostart_action.toggled.connect(self.autostart_toggled.emit)
+
+        menu.addSeparator()
+
+        self._settings_action = menu.addAction("Settings...")
+        self._settings_action.triggered.connect(self.settings_requested.emit)
 
         menu.addSeparator()
 
