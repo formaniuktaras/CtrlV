@@ -40,6 +40,31 @@ class WindowBehaviorController(QObject):
         self._drag_handle.installEventFilter(self)
         self._window.installEventFilter(self)
 
+    @property
+    def always_on_top(self) -> bool:
+        return self._settings.always_on_top
+
+    @property
+    def auto_hide_enabled(self) -> bool:
+        return self._dock.auto_hide_enabled
+
+    def set_always_on_top(self, enabled: bool) -> None:
+        if self._settings.always_on_top == enabled:
+            return
+
+        self._settings.always_on_top = enabled
+        self._window.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, enabled)
+
+        is_visible = self._window.isVisible()
+        if is_visible:
+            self._window.show()
+            self._window.raise_()
+
+        self._persist_sidebar_settings()
+
+    def set_auto_hide_enabled(self, enabled: bool) -> None:
+        self._dock.set_auto_hide_enabled(enabled)
+
     def on_ready(self) -> None:
         self._dock.restore_position(prefer_collapsed=self._settings.panel_state == PanelState.COLLAPSED)
         self._dock.start()
@@ -87,9 +112,6 @@ class WindowBehaviorController(QObject):
         if event.type() == QEvent.Type.Resize:
             self._dock.handle_resize()
             self._resize_save_timer.start()
-
-        if event.type() == QEvent.Type.Close:
-            self.shutdown()
 
         return False
 

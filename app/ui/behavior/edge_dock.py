@@ -70,6 +70,20 @@ class EdgeDockController(QObject):
         self._auto_hide_enabled = settings.auto_hide_enabled
         self._last_expanded_pos = QPoint(settings.expanded_x, settings.expanded_y)
 
+    @property
+    def auto_hide_enabled(self) -> bool:
+        return self._auto_hide_enabled
+
+    def set_auto_hide_enabled(self, enabled: bool) -> None:
+        if self._auto_hide_enabled == enabled:
+            return
+
+        self._auto_hide_enabled = enabled
+        if not enabled and self._runtime_state == RuntimeState.DOCKED_COLLAPSED:
+            self.expand()
+
+        self.settings_changed.emit()
+
     def start(self) -> None:
         self._hover_poll_timer.start()
 
