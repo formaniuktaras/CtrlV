@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.1.2] - 2026-04-13
+
+### Changed
+- Hardened autostart to a single canonical Startup-folder shortcut source (`CtrlV.lnk`) with strict validation of target path, arguments, and working directory.
+- Made autostart enable/disable idempotent and duplicate-safe for known legacy shortcut variants.
+- Improved startup flow so `--startup` launches tray-first and secondary autostart launches exit quietly without forcing sidebar activation.
+- Improved runtime executable path resolution for packaged vs source runs (no current-working-directory dependency).
+- Polished Inno Setup metadata/tasks/run behavior and standardized installer artifact naming to `CtrlV-Setup-<version>.exe`.
+- Added installer close-running-app safeguards to reduce reinstall/upgrade mixed-state risks.
+- Aligned product wording/behavior docs for installer, portable, startup, logs, and uninstall expectations.
+
 ## [0.1.1] - 2026-04-12
 
 ### Added

@@ -33,7 +33,7 @@ class TrayService(QObject):
     open_logs_folder_requested = Signal()
     menu_opening = Signal()
 
-    def __init__(self, parent_widget: QWidget, tooltip: str = "CtrlV Clipboard Manager") -> None:
+    def __init__(self, parent_widget: QWidget, tooltip: str = "CtrlV") -> None:
         super().__init__(parent_widget)
         self._parent_widget = parent_widget
         self._tooltip = tooltip

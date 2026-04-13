@@ -39,10 +39,13 @@ def create_application(argv: Sequence[str]) -> QApplication:
     LOGGER.info("Starting %s application v%s", APP_NAME, VERSION)
 
     args = set(argv[1:])
+    startup_invocation = "--startup" in args
+    start_minimized = startup_invocation or "--minimized" in args
 
     single_instance = SingleInstanceService(server_name=f"{APP_NAME}_single_instance", parent=app)
-    if not single_instance.try_acquire_primary():
-        LOGGER.info("Detected running instance. Activation signal sent; exiting secondary process.")
+    activation_message = "" if startup_invocation else "show"
+    if not single_instance.try_acquire_primary(notify_message=activation_message):
+        LOGGER.info("Detected running instance. Secondary process exits without creating a second tray icon.")
         QTimer.singleShot(0, app.quit)
         return app
 
@@ -52,7 +55,7 @@ def create_application(argv: Sequence[str]) -> QApplication:
     service = ClipboardService(clipboard=clipboard)
     monitor = ClipboardMonitor(clipboard=clipboard, parser=parser, store=store)
     settings_service = SettingsService()
-    start_minimized = "--startup" in args or "--minimized" in args or settings_service.load_start_minimized_to_tray()
+    start_minimized = start_minimized or settings_service.load_start_minimized_to_tray()
     autostart_service = AutostartService(app_name=APP_NAME, executable_path=_runtime_executable_path())
 
     window = MainWindow(
@@ -95,4 +98,6 @@ def create_application(argv: Sequence[str]) -> QApplication:
 
 
 def _runtime_executable_path() -> Path:
-    return Path(sys.executable).resolve()
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve()
+    return Path(sys.argv[0]).resolve()

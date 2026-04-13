@@ -18,8 +18,8 @@ class SingleInstanceService(QObject):
         self._server_name = server_name
         self._server: QLocalServer | None = None
 
-    def try_acquire_primary(self) -> bool:
-        if self._try_notify_primary():
+    def try_acquire_primary(self, notify_message: str = "show") -> bool:
+        if self._try_notify_primary(notify_message):
             LOGGER.info("Secondary instance detected; notified primary instance")
             return False
 
@@ -41,14 +41,14 @@ class SingleInstanceService(QObject):
         QLocalServer.removeServer(self._server_name)
         self._server = None
 
-    def _try_notify_primary(self) -> bool:
+    def _try_notify_primary(self, message: str) -> bool:
         socket = QLocalSocket(self)
         socket.connectToServer(self._server_name)
         if not socket.waitForConnected(150):
             socket.abort()
             return False
 
-        socket.write(b"show")
+        socket.write(message.encode("utf-8"))
         socket.flush()
         socket.waitForBytesWritten(150)
         socket.disconnectFromServer()

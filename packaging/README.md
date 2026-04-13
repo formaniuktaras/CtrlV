@@ -1,122 +1,70 @@
 # Packaging and Release (Windows)
 
-This directory contains the release workflow for CtrlV on Windows: building a portable package with PyInstaller and creating a user installer with Inno Setup.
+This directory contains the release workflow for CtrlV on Windows: build portable with PyInstaller and build installer with Inno Setup.
 
-## Scope
+## Source of truth
 
-The packaging layer is responsible for:
-
-- producing release artifacts for end users;
-- keeping artifact names/versioning consistent;
-- using one version source (`app/version.py`);
-- preserving a predictable output layout under `release/`.
-
-## Prerequisites
-
-- Windows 10/11 x64
-- Python 3.12+
-- Project dependencies installed:
-
-```powershell
-pip install -r requirements.txt
-pip install -r packaging/requirements-build.txt
-```
-
-- Inno Setup 6 installed for installer builds (`ISCC.exe` in PATH or default Program Files location)
-
-## Source of truth for name/version
-
-Packaging reads metadata from `app/version.py`:
+Packaging metadata comes from `app/version.py`:
 
 - `APP_NAME`
 - `PUBLISHER`
 - `VERSION`
 
-Scripts pass these values into PyInstaller and Inno Setup build steps.
+Build scripts pass these values into installer defines and artifact names.
 
-## Build commands
+## Prerequisites
 
-Run from repository root in PowerShell.
+- Windows 10/11 x64
+- Python 3.12+
+- `pip install -r requirements.txt`
+- `pip install -r packaging/requirements-build.txt`
+- Inno Setup 6 (`ISCC.exe`)
 
-### 1) Clean previous outputs
+## Build commands (PowerShell)
 
 ```powershell
 ./packaging/scripts/clean.ps1
-```
-
-### 2) Build portable package
-
-```powershell
 ./packaging/scripts/build_portable.ps1
-```
-
-Produces:
-
-- `dist/CtrlV-portable/` (PyInstaller output)
-- `release/portable/CtrlV-<version>-portable/` (release-ready copy)
-
-### 3) Build installer
-
-```powershell
 ./packaging/scripts/build_installer.ps1
-```
-
-Requires `dist/CtrlV-portable/CtrlV.exe` from the portable step.
-
-Produces:
-
-- `release/installer/CtrlV-Setup-<version>-x64.exe`
-
-### 4) Run full pipeline
-
-```powershell
+# or
 ./packaging/scripts/build_all.ps1
 ```
 
-Runs `clean -> build_portable -> build_installer`.
-
-## Release output layout
+## Release outputs
 
 ```text
 release/
   portable/
     CtrlV-<version>-portable/
-      CtrlV.exe
-      README.txt
-      VERSION.txt
-      ...runtime files...
   installer/
-    CtrlV-Setup-<version>-x64.exe
+    CtrlV-Setup-<version>.exe
 ```
 
 ## Installer behavior
 
-The installer is per-user and does not require admin privileges.
+- Per-user install (`%LOCALAPPDATA%\Programs\CtrlV`)
+- Start Menu shortcut
+- Optional desktop shortcut
+- Optional `Launch at Windows startup` task
+- Optional `Launch CtrlV` at install finish
+- Installer asks to close running CtrlV before file replacement
 
-- Default install directory: `%LOCALAPPDATA%\Programs\CtrlV`
-- Start Menu shortcut: yes
-- Optional desktop shortcut: yes
-- Optional autostart task (per-user Startup shortcut): yes
-- Uninstall entry: yes
-- Launch app after install: optional checkbox
-- User settings cleanup on uninstall: not performed by default
+Autostart is intentionally single-mechanism only:
 
-Autostart integration uses a single startup mechanism: `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\CtrlV.lnk` with `--startup` argument.
-The same artifact is used by both installer task and runtime tray toggle to keep behavior predictable.
+- `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\CtrlV.lnk`
+- shortcut args: `--startup`
+- shortcut working dir: install folder
 
+Runtime toggles and installer task both manage the same startup artifact.
 
-## Runtime diagnostics notes
+## Uninstall behavior
 
-- Installer and portable builds both write logs to `%LOCALAPPDATA%\CtrlV\logs\ctrlv.log`.
-- If CtrlV does not appear after launch, check tray icon first, then inspect logs.
-- If panel geometry becomes invalid, use **Reset panel position/state** from tray or Settings → Advanced.
-- `Launch at startup` is validated against shortcut target + arguments (`--startup`) + working directory.
+Uninstall removes installed files and installer shortcuts, including `CtrlV.lnk` in user Startup folder.
 
-## Icon wiring
+User profile data (settings/logs/history) is preserved by default.
 
-Place app icon at:
+## Known limitations
 
-- `assets/icons/app.ico`
-
-If this file exists, both PyInstaller and Inno Setup use it automatically.
-If it is missing, builds still succeed with default icons.
+- No auto-updater yet (manual reinstall/upgrade flow).
+- No code-signing in this phase.
+- No MSI/winget/scoop packaging in this phase.
