@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -39,7 +40,9 @@ class MainWindow(QMainWindow):
         self._monitor = monitor
 
         self._drag_handle = QWidget(self)
+        self._tabs = QTabWidget(self)
         self._history_list = HistoryListWidget(self)
+        self._pinned_list = HistoryListWidget(self)
         self._status_label = QLabel(self)
         self._status_label.setObjectName("metaLabel")
         self._restore_button = QPushButton("Copy selected again", self)
@@ -52,7 +55,7 @@ class MainWindow(QMainWindow):
 
     def clear_history(self) -> None:
         LOGGER.info("History cleared by user action")
-        self._store.clear()
+        self._service.clear_history(preserve_pinned=True)
         self._refresh_history()
 
     def shutdown(self) -> None:
@@ -99,7 +102,9 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(self._drag_handle)
         layout.addLayout(button_row)
-        layout.addWidget(self._history_list, stretch=1)
+        self._tabs.addTab(self._history_list, "History")
+        self._tabs.addTab(self._pinned_list, "Pinned")
+        layout.addWidget(self._tabs, stretch=1)
         layout.addWidget(self._status_label)
 
         self.setCentralWidget(central)
@@ -108,6 +113,14 @@ class MainWindow(QMainWindow):
         self._restore_button.clicked.connect(self._restore_selected)
         self._clear_button.clicked.connect(self.clear_history)
         self._history_list.itemDoubleClicked.connect(lambda _: self._restore_selected())
+        self._history_list.restore_requested.connect(self._restore_selected)
+        self._history_list.pin_toggled.connect(self._toggle_pin)
+        self._history_list.delete_requested.connect(self._delete_item)
+
+        self._pinned_list.itemDoubleClicked.connect(lambda _: self._restore_selected())
+        self._pinned_list.restore_requested.connect(self._restore_selected)
+        self._pinned_list.pin_toggled.connect(self._toggle_pin)
+        self._pinned_list.delete_requested.connect(self._delete_item)
 
         self._monitor.signals.item_added.connect(self._on_item_added)
         self._monitor.signals.duplicate_skipped.connect(self._on_duplicate_skipped)
@@ -123,11 +136,15 @@ class MainWindow(QMainWindow):
         QMessageBox.warning(self, "Clipboard parse error", error_message)
 
     def _refresh_history(self) -> None:
-        self._history_list.set_items(self._store.get_items())
-        self._status_label.setText(f"Items in history: {len(self._store)}")
+        all_items = self._service.get_all_items()
+        pinned_items = self._service.get_pinned_items()
+        self._history_list.set_items(all_items)
+        self._pinned_list.set_items(pinned_items)
+        self._status_label.setText(f"Items: {len(all_items)} • Pinned: {len(pinned_items)}")
 
     def _restore_selected(self) -> None:
-        item = self._history_list.selected_item()
+        current_list = self._history_list if self._tabs.currentIndex() == 0 else self._pinned_list
+        item = current_list.selected_item()
         if item is None:
             return
         self._monitor.mark_programmatic_fingerprint(item.fingerprint)
@@ -136,3 +153,11 @@ class MainWindow(QMainWindow):
             self._status_label.setText(f"Restored item: {item.item_type.value}")
         else:
             self._status_label.setText("Failed to restore selected item")
+
+    def _toggle_pin(self, item_id: str) -> None:
+        if self._service.toggle_pin(item_id):
+            self._refresh_history()
+
+    def _delete_item(self, item_id: str) -> None:
+        if self._service.delete_item(item_id):
+            self._refresh_history()

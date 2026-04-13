@@ -52,7 +52,7 @@ def create_application(argv: Sequence[str]) -> QApplication:
     clipboard = app.clipboard()
     parser = ClipboardParser(preview_limit=90, thumbnail_size=48)
     store = HistoryStore(max_items=100)
-    service = ClipboardService(clipboard=clipboard)
+    service = ClipboardService(clipboard=clipboard, store=store)
     monitor = ClipboardMonitor(clipboard=clipboard, parser=parser, store=store)
     settings_service = SettingsService()
     start_minimized = start_minimized or settings_service.load_start_minimized_to_tray()
