@@ -29,15 +29,20 @@ class SettingsWindow(QDialog):
 
         self.setWindowTitle("Settings")
         self.setModal(False)
-        self.setMinimumWidth(420)
-        self.resize(460, 470)
+        self.setMinimumWidth(440)
+        self.resize(480, 520)
 
         self._launch_at_startup = QCheckBox("Launch at startup")
+        self._launch_at_startup_hint = QLabel("Creates a Startup shortcut that launches CtrlV with --startup.")
+
         self._start_minimized = QCheckBox("Start minimized to tray")
+        self._start_minimized_hint = QLabel("On manual launch, keep sidebar hidden until you open it from tray.")
+
         self._always_on_top = QCheckBox("Always on top")
 
         self._auto_hide = QCheckBox("Auto-hide sidebar")
         self._reveal_on_hover = QCheckBox("Reveal on hover")
+        self._reveal_on_hover_hint = QLabel("When enabled, moving cursor to the dock edge reveals the sidebar.")
 
         self._hide_delay = QSpinBox()
         self._hide_delay.setRange(0, 3000)
@@ -53,7 +58,8 @@ class SettingsWindow(QDialog):
         self._panel_width_slider.setSingleStep(10)
         self._panel_width_value = QLabel("420 px")
 
-        self._reset_panel_button = QPushButton("Reset window position/state")
+        self._reset_panel_button = QPushButton("Reset panel position/state")
+        self._open_logs_button = QPushButton("Open logs folder")
 
         self._build_layout()
         self._wire_signals()
@@ -81,8 +87,16 @@ class SettingsWindow(QDialog):
         layout = QVBoxLayout(group)
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(8)
+        for hint in [self._launch_at_startup_hint, self._start_minimized_hint]:
+            hint.setWordWrap(True)
+            hint.setObjectName("metaLabel")
+
         layout.addWidget(self._launch_at_startup)
+        layout.addWidget(self._launch_at_startup_hint)
+        layout.addSpacing(6)
         layout.addWidget(self._start_minimized)
+        layout.addWidget(self._start_minimized_hint)
+        layout.addSpacing(6)
         layout.addWidget(self._always_on_top)
 
         wrapper = QWidget()
@@ -98,7 +112,10 @@ class SettingsWindow(QDialog):
         form.addRow(self._reveal_on_hover)
         form.addRow("Hide delay", self._hide_delay)
 
-        note = QLabel("All changes are applied immediately.")
+        self._reveal_on_hover_hint.setWordWrap(True)
+        self._reveal_on_hover_hint.setObjectName("metaLabel")
+
+        note = QLabel("Changes are applied immediately.")
         note.setWordWrap(True)
         note.setObjectName("metaLabel")
 
@@ -106,6 +123,7 @@ class SettingsWindow(QDialog):
         root = QVBoxLayout(wrapper)
         root.setContentsMargins(8, 8, 8, 8)
         root.addLayout(form)
+        root.addWidget(self._reveal_on_hover_hint)
         root.addWidget(note)
         root.addStretch(1)
         return wrapper
@@ -130,6 +148,7 @@ class SettingsWindow(QDialog):
         root.setContentsMargins(8, 8, 8, 8)
         root.setSpacing(8)
         root.addWidget(self._reset_panel_button)
+        root.addWidget(self._open_logs_button)
         root.addStretch(1)
         return wrapper
 
@@ -146,6 +165,7 @@ class SettingsWindow(QDialog):
         self._panel_width_slider.valueChanged.connect(self._on_panel_width_changed)
 
         self._reset_panel_button.clicked.connect(self._on_reset_panel)
+        self._open_logs_button.clicked.connect(self._controller.open_logs_folder)
         self._controller.state_changed.connect(self._sync_from_state)
 
     def _on_dock_side_changed(self) -> None:
@@ -158,7 +178,7 @@ class SettingsWindow(QDialog):
         self._controller.set_panel_width(width)
 
     def _on_reset_panel(self) -> None:
-        self._sync_from_state(self._controller.reset_window_state())
+        self._sync_from_state(self._controller.reset_panel_position_state())
 
     def _sync_from_state(self, state: SettingsViewState) -> None:
         blockers = [
@@ -184,5 +204,10 @@ class SettingsWindow(QDialog):
 
         self._panel_width_slider.setValue(state.panel_width)
         self._panel_width_value.setText(f"{state.panel_width} px")
+
+        behavior_controls_enabled = state.auto_hide_sidebar
+        self._reveal_on_hover.setEnabled(behavior_controls_enabled)
+        self._hide_delay.setEnabled(behavior_controls_enabled)
+        self._reveal_on_hover_hint.setEnabled(behavior_controls_enabled)
 
         del blockers

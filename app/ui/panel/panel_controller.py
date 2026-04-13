@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+import logging
 
 from PySide6.QtCore import QObject, Signal
 
@@ -38,6 +39,9 @@ class PanelSnapshot:
     panel_mode: PanelMode
     dock_state: DockState
     runtime: RuntimeMode
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class PanelController(QObject):
@@ -120,6 +124,7 @@ class PanelController(QObject):
         )
 
     def show_panel(self) -> None:
+        LOGGER.info("Panel show requested")
         if self.snapshot.dock_state != DockState.FLOATING:
             self._behavior.ensure_docked_geometry(prefer_collapsed=False)
 
@@ -136,6 +141,7 @@ class PanelController(QObject):
         self.expand_panel()
 
     def hide_panel(self) -> None:
+        LOGGER.info("Panel hide requested")
         if not self._window.isVisible():
             self._sync_state()
             return
@@ -143,6 +149,7 @@ class PanelController(QObject):
         self._sync_state()
 
     def toggle_panel(self) -> None:
+        LOGGER.info("Panel toggle requested")
         state = self.snapshot
 
         if state.visibility == VisibilityState.HIDDEN:
@@ -214,6 +221,7 @@ class PanelController(QObject):
         self._sync_state()
 
     def reset_position_state(self) -> None:
+        LOGGER.info("Panel reset position/state requested")
         self._behavior.reset_position_state()
         self.expand_panel()
         self._sync_state()

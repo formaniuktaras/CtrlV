@@ -7,11 +7,11 @@ from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from app.core.clipboard_monitor import ClipboardMonitor
-from app.services.autostart_service import AutostartError, AutostartService
+from app.services.autostart_service import AutostartService
 from app.services.settings_service import SettingsService
 from app.services.tray_service import TrayMenuState, TrayService
 from app.ui.main_window import MainWindow
-from app.ui.panel import PanelController
+from app.ui.panel import PanelController, PanelMode, VisibilityState
 from app.ui.settings import SettingsController, SettingsWindow
 
 LOGGER = logging.getLogger(__name__)
@@ -55,29 +55,32 @@ class AppLifecycleController(QObject):
         self._app.setQuitOnLastWindowClosed(not self._tray_enabled)
 
         if self._tray_enabled:
-            self._sync_tray_menu()
-            self._sync_autostart_menu()
+            self._sync_runtime_state()
             self._show_first_run_hint_if_needed()
         else:
             LOGGER.warning("System tray is unavailable. Running without tray integration.")
 
     def show_sidebar(self) -> None:
+        LOGGER.info("Panel action: show sidebar")
         self._panel_controller.show_panel()
-        self._sync_tray_menu()
+        self._sync_runtime_state()
 
     def start(self) -> None:
+        LOGGER.info("Lifecycle start (start_minimized=%s, tray_enabled=%s)", self._start_minimized, self._tray_enabled)
         if self._start_minimized and self._tray_enabled:
             self.hide_sidebar()
             return
         self.show_sidebar()
 
     def hide_sidebar(self) -> None:
+        LOGGER.info("Panel action: hide sidebar")
         self._panel_controller.hide_panel()
-        self._sync_tray_menu()
+        self._sync_runtime_state()
 
     def toggle_sidebar(self) -> None:
+        LOGGER.info("Panel action: toggle sidebar")
         self._panel_controller.toggle_panel()
-        self._sync_tray_menu()
+        self._sync_runtime_state()
 
     def quit_application(self) -> None:
         if self._quitting:
@@ -93,21 +96,24 @@ class AppLifecycleController(QObject):
         self._settings_service.flush()
         self._tray_service.shutdown()
 
+        LOGGER.info("Application shutdown complete")
         self._app.quit()
 
     def _wire_window_signals(self) -> None:
         self._window.close_requested.connect(self._on_window_close_requested)
-        self._panel_controller.visibility_changed.connect(lambda _: self._sync_tray_menu())
+        self._panel_controller.visibility_changed.connect(lambda _: self._sync_runtime_state())
 
     def _wire_tray_signals(self) -> None:
         self._tray_service.toggle_sidebar_requested.connect(self.toggle_sidebar)
         self._tray_service.clear_history_requested.connect(self._window.clear_history)
         self._tray_service.settings_requested.connect(self._open_settings_window)
         self._tray_service.quit_requested.connect(self.quit_application)
-        self._tray_service.always_on_top_toggled.connect(self._on_always_on_top_toggled)
-        self._tray_service.auto_hide_toggled.connect(self._on_auto_hide_toggled)
-        self._tray_service.autostart_toggled.connect(self._on_autostart_toggled)
-        self._tray_service.menu_opening.connect(self._sync_autostart_menu)
+        self._tray_service.always_on_top_toggled.connect(self._settings_controller.set_always_on_top)
+        self._tray_service.auto_hide_toggled.connect(self._settings_controller.set_auto_hide)
+        self._tray_service.autostart_toggled.connect(self._settings_controller.set_autostart)
+        self._tray_service.reset_panel_requested.connect(self._settings_controller.reset_panel_position_state)
+        self._tray_service.open_logs_folder_requested.connect(self._settings_controller.open_logs_folder)
+        self._tray_service.menu_opening.connect(self._sync_runtime_state)
 
     def _wire_settings_signals(self) -> None:
         self._settings_controller.state_changed.connect(lambda _: self._on_settings_state_changed())
@@ -130,47 +136,20 @@ class AppLifecycleController(QObject):
         close_event.ignore()
         self.hide_sidebar()
 
-    def _on_always_on_top_toggled(self, enabled: bool) -> None:
-        self._panel_controller.set_always_on_top(enabled)
-        self._tray_settings.always_on_top = enabled
-        self._settings_service.save_tray_settings(self._tray_settings)
-        self._sync_tray_menu()
-
-    def _on_auto_hide_toggled(self, enabled: bool) -> None:
-        self._panel_controller.set_auto_hide_enabled(enabled)
-        self._tray_settings.auto_hide_enabled = enabled
-        self._settings_service.save_tray_settings(self._tray_settings)
-        self._sync_tray_menu()
-
-    def _sync_tray_menu(self) -> None:
+    def _sync_runtime_state(self) -> None:
         if not self._tray_enabled:
             return
 
+        snapshot = self._panel_controller.snapshot
         self._tray_service.update_menu_state(
             TrayMenuState(
-                sidebar_visible=self._panel_controller.is_visible,
+                sidebar_visible=snapshot.visibility == VisibilityState.VISIBLE,
+                sidebar_collapsed=snapshot.panel_mode == PanelMode.COLLAPSED,
                 always_on_top=self._panel_controller.always_on_top,
                 auto_hide_enabled=self._panel_controller.auto_hide_enabled,
+                launch_at_startup=self._autostart_service.is_enabled(),
             )
         )
-
-    def _sync_autostart_menu(self) -> None:
-        if not self._tray_enabled:
-            return
-        self._tray_service.set_autostart_checked(self._autostart_service.is_enabled())
-
-    def _on_autostart_toggled(self, enabled: bool) -> None:
-        try:
-            if enabled:
-                self._autostart_service.enable()
-            else:
-                self._autostart_service.disable()
-        except AutostartError as exc:
-            LOGGER.exception("Failed to update autostart state")
-            self._tray_service.show_message("CtrlV", f"Autostart update failed: {exc}", timeout_ms=4000)
-            QMessageBox.warning(self._window, "Autostart error", str(exc))
-        finally:
-            self._sync_autostart_menu()
 
     def _open_settings_window(self) -> None:
         self._settings_window.open_and_sync()
@@ -179,8 +158,7 @@ class AppLifecycleController(QObject):
         self._tray_settings.always_on_top = self._panel_controller.always_on_top
         self._tray_settings.auto_hide_enabled = self._panel_controller.auto_hide_enabled
         self._settings_service.save_tray_settings(self._tray_settings)
-        self._sync_tray_menu()
-        self._sync_autostart_menu()
+        self._sync_runtime_state()
 
     def _on_settings_save_failed(self, message: str) -> None:
         self._tray_service.show_message("CtrlV", f"Settings update failed: {message}", timeout_ms=4000)

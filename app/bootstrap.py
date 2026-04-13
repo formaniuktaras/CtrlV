@@ -17,29 +17,32 @@ from app.services.clipboard_service import ClipboardService
 from app.services.settings_service import SettingsService
 from app.services.single_instance_service import SingleInstanceService
 from app.ui.main_window import MainWindow
-from app.version import APP_NAME, VERSION
 from app.ui.panel import PanelController
 from app.ui.settings import SettingsController
 from app.ui.styles import APP_STYLE
 from app.utils.logging_config import configure_logging
+from app.utils.runtime_diagnostics import RuntimeDiagnostics
+from app.version import APP_NAME, VERSION
 
 LOGGER = logging.getLogger(__name__)
 
 
 def create_application(argv: Sequence[str]) -> QApplication:
-    configure_logging()
-    LOGGER.info("Starting %s application v%s", APP_NAME, VERSION)
-
     app = QApplication(list(argv))
     app.setApplicationName(APP_NAME)
     app.setOrganizationName(APP_NAME)
     app.setApplicationVersion(VERSION)
     app.setStyleSheet(APP_STYLE)
 
+    configure_logging()
+    RuntimeDiagnostics().install()
+    LOGGER.info("Starting %s application v%s", APP_NAME, VERSION)
+
     args = set(argv[1:])
 
     single_instance = SingleInstanceService(server_name=f"{APP_NAME}_single_instance", parent=app)
     if not single_instance.try_acquire_primary():
+        LOGGER.info("Detected running instance. Activation signal sent; exiting secondary process.")
         QTimer.singleShot(0, app.quit)
         return app
 

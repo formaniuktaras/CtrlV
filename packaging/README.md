@@ -104,6 +104,14 @@ The installer is per-user and does not require admin privileges.
 Autostart integration uses a single startup mechanism: `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\CtrlV.lnk` with `--startup` argument.
 The same artifact is used by both installer task and runtime tray toggle to keep behavior predictable.
 
+
+## Runtime diagnostics notes
+
+- Installer and portable builds both write logs to `%LOCALAPPDATA%\CtrlV\logs\ctrlv.log`.
+- If CtrlV does not appear after launch, check tray icon first, then inspect logs.
+- If panel geometry becomes invalid, use **Reset panel position/state** from tray or Settings → Advanced.
+- `Launch at startup` is validated against shortcut target + arguments (`--startup`) + working directory.
+
 ## Icon wiring
 
 Place app icon at:
