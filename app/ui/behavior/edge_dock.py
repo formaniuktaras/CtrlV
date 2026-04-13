@@ -38,7 +38,7 @@ class EdgeDockController(QObject):
 
         self._dock_side = DockSide.RIGHT
         self._runtime_state = RuntimeState.FLOATING
-        self._last_expanded_pos = QPoint(0, 120)
+        self._last_expanded_pos = QPoint(0, 0)
 
         self._hide_timer = QTimer(self)
         self._hide_timer.setSingleShot(True)
@@ -116,17 +116,8 @@ class EdgeDockController(QObject):
         self._reveal_timer.stop()
 
     def restore_position(self, prefer_collapsed: bool) -> None:
-        screen = self._active_screen_geometry(self._last_expanded_pos)
-        self._clamp_window_size(screen)
-        expanded = self._expanded_position(screen, self._last_expanded_pos.y())
-        self._last_expanded_pos = expanded
-
-        if prefer_collapsed:
-            self._window.move(self._collapsed_position(screen, expanded.y()))
-            self._set_runtime_state(RuntimeState.DOCKED_COLLAPSED)
-        else:
-            self._window.move(expanded)
-            self._set_runtime_state(RuntimeState.DOCKED_EXPANDED)
+        self.apply_docked_geometry(prefer_collapsed=prefer_collapsed, reference=self._last_expanded_pos)
+        self.settings_changed.emit()
 
     def set_dock_side(self, side: DockSide) -> None:
         if self._dock_side == side:
@@ -139,13 +130,8 @@ class EdgeDockController(QObject):
             self.settings_changed.emit()
             return
 
-        screen = self._active_screen_geometry()
-        expanded = self._expanded_position(screen, self._window.y())
-        self._last_expanded_pos = expanded
-        if self._runtime_state in {RuntimeState.DOCKED_COLLAPSED, RuntimeState.ANIMATING_COLLAPSE}:
-            self._window.move(self._collapsed_position(screen, expanded.y()))
-        else:
-            self._window.move(expanded)
+        prefer_collapsed = self._runtime_state in {RuntimeState.DOCKED_COLLAPSED, RuntimeState.ANIMATING_COLLAPSE}
+        self.apply_docked_geometry(prefer_collapsed=prefer_collapsed)
         self.settings_changed.emit()
 
     def set_floating(self, floating: bool) -> None:
@@ -167,7 +153,7 @@ class EdgeDockController(QObject):
 
     def snap_to_nearest_edge(self) -> None:
         screen = self._active_screen_geometry()
-        self._clamp_window_size(screen)
+        self._clamp_window_width(screen)
         center_x = self._window.frameGeometry().center().x()
 
         old_side = self._dock_side
@@ -177,10 +163,7 @@ class EdgeDockController(QObject):
         if old_side != self._dock_side:
             self.dock_side_changed.emit(self._dock_side.value)
 
-        expanded = self._expanded_position(screen, self._window.y())
-        self._window.move(expanded)
-        self._last_expanded_pos = expanded
-        self._set_runtime_state(RuntimeState.DOCKED_EXPANDED)
+        self.apply_docked_geometry(prefer_collapsed=False)
         self.settings_changed.emit()
 
     def expand(self) -> None:
@@ -190,7 +173,8 @@ class EdgeDockController(QObject):
         self._reveal_timer.stop()
 
         screen = self._active_screen_geometry()
-        target = self._expanded_position(screen, self._window.y())
+        self._normalize_docked_height(screen)
+        target = self._expanded_position(screen)
         started = self._animation.animate_expand(target)
         if started:
             self._set_runtime_state(RuntimeState.ANIMATING_EXPAND)
@@ -209,7 +193,8 @@ class EdgeDockController(QObject):
         self._reveal_timer.stop()
 
         screen = self._active_screen_geometry()
-        target = self._collapsed_position(screen, self._window.y())
+        self._normalize_docked_height(screen)
+        target = self._collapsed_position(screen)
         started = self._animation.animate_collapse(target)
         if started:
             self._set_runtime_state(RuntimeState.ANIMATING_COLLAPSE)
@@ -232,25 +217,41 @@ class EdgeDockController(QObject):
 
     def handle_resize(self) -> None:
         screen = self._active_screen_geometry()
-        self._clamp_window_size(screen)
-
-        if self._runtime_state in {RuntimeState.DOCKED_EXPANDED, RuntimeState.ANIMATING_EXPAND}:
-            expanded = self._expanded_position(screen, self._window.y())
-            self._window.move(expanded)
-            self._last_expanded_pos = expanded
-        elif self._runtime_state in {RuntimeState.DOCKED_COLLAPSED, RuntimeState.ANIMATING_COLLAPSE}:
-            expanded = self._expanded_position(screen, self._window.y())
-            self._last_expanded_pos = expanded
-            self._window.move(self._collapsed_position(screen, expanded.y()))
+        if self._runtime_state == RuntimeState.FLOATING:
+            self._clamp_floating_size(screen)
+        else:
+            prefer_collapsed = self._runtime_state in {RuntimeState.DOCKED_COLLAPSED, RuntimeState.ANIMATING_COLLAPSE}
+            self.apply_docked_geometry(prefer_collapsed=prefer_collapsed)
 
         self.settings_changed.emit()
 
+    def apply_docked_geometry(self, prefer_collapsed: bool | None = None, reference: QPoint | None = None) -> None:
+        screen = self._active_screen_geometry(reference)
+        self._clamp_window_width(screen)
+        self._normalize_docked_height(screen)
+
+        expanded = self._expanded_position(screen)
+        self._last_expanded_pos = expanded
+
+        collapse = prefer_collapsed
+        if collapse is None:
+            collapse = self._runtime_state in {RuntimeState.DOCKED_COLLAPSED, RuntimeState.ANIMATING_COLLAPSE}
+
+        if collapse:
+            self._window.move(self._collapsed_position(screen))
+            self._set_runtime_state(RuntimeState.DOCKED_COLLAPSED)
+            return
+
+        self._window.move(expanded)
+        self._set_runtime_state(RuntimeState.DOCKED_EXPANDED)
+
     def current_settings_snapshot(self) -> SidebarSettings:
+        is_floating = self._runtime_state == RuntimeState.FLOATING
         return SidebarSettings(
             width=self._window.width(),
-            height=self._window.height(),
+            height=self._window.height() if is_floating else 0,
             expanded_x=self._last_expanded_pos.x(),
-            expanded_y=self._last_expanded_pos.y(),
+            expanded_y=self._last_expanded_pos.y() if is_floating else 0,
             dock_side=self._dock_side,
             panel_state=self.panel_state,
             visible_edge_px=self._visible_edge_px,
@@ -313,11 +314,7 @@ class EdgeDockController(QObject):
 
     def _on_animation_finished(self, target: str) -> None:
         if target == AnimationTarget.EXPAND.value:
-            screen = self._active_screen_geometry()
-            expanded = self._expanded_position(screen, self._window.y())
-            self._window.move(expanded)
-            self._last_expanded_pos = expanded
-            self._set_runtime_state(RuntimeState.DOCKED_EXPANDED)
+            self.apply_docked_geometry(prefer_collapsed=False)
             self.settings_changed.emit()
             return
 
@@ -340,30 +337,33 @@ class EdgeDockController(QObject):
         bottom = self._window.y() + self._window.height() + self._reveal_vertical_tolerance_px
         return top <= cursor.y() <= bottom
 
-    def _expanded_position(self, screen: QRect, y: int) -> QPoint:
-        clamped_y = self._clamp_y(y, screen)
+    def _expanded_position(self, screen: QRect) -> QPoint:
+        y = screen.top()
         if self._dock_side == DockSide.LEFT:
             x = screen.left()
         else:
             x = screen.right() - self._window.width() + 1
-        return QPoint(x, clamped_y)
+        return QPoint(x, y)
 
-    def _collapsed_position(self, screen: QRect, y: int) -> QPoint:
-        clamped_y = self._clamp_y(y, screen)
+    def _collapsed_position(self, screen: QRect) -> QPoint:
+        y = screen.top()
         if self._dock_side == DockSide.LEFT:
             x = screen.left() - self._window.width() + self._visible_edge_px
         else:
             x = screen.right() - self._visible_edge_px + 1
-        return QPoint(x, clamped_y)
+        return QPoint(x, y)
 
-    def _clamp_y(self, y: int, screen: QRect) -> int:
-        top = screen.top()
-        bottom = screen.bottom() - self._window.height() + 1
-        if bottom < top:
-            return top
-        return max(top, min(y, bottom))
+    def _clamp_window_width(self, screen: QRect) -> None:
+        clamped_width = max(1, min(self._window.width(), screen.width()))
+        if clamped_width != self._window.width():
+            self._window.resize(clamped_width, self._window.height())
 
-    def _clamp_window_size(self, screen: QRect) -> None:
+    def _normalize_docked_height(self, screen: QRect) -> None:
+        target_height = max(1, screen.height())
+        if self._window.height() != target_height:
+            self._window.resize(self._window.width(), target_height)
+
+    def _clamp_floating_size(self, screen: QRect) -> None:
         clamped_height = max(1, min(self._window.height(), screen.height()))
         clamped_width = max(1, min(self._window.width(), screen.width()))
 

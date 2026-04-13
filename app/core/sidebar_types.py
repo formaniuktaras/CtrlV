@@ -26,9 +26,9 @@ class RuntimeState(str, Enum):
 @dataclass(slots=True)
 class SidebarSettings:
     width: int = 420
-    height: int = 640
+    height: int = 0
     expanded_x: int = 0
-    expanded_y: int = 120
+    expanded_y: int = 0
     dock_side: DockSide = DockSide.RIGHT
     panel_state: PanelState = PanelState.EXPANDED
     visible_edge_px: int = 8

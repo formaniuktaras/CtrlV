@@ -20,9 +20,9 @@ class SettingsService:
 
         return SidebarSettings(
             width=self._int("sidebar/width", 420),
-            height=self._int("sidebar/height", 640),
+            height=self._int("sidebar/height", 0),
             expanded_x=self._int("sidebar/expanded_x", 0),
-            expanded_y=self._int("sidebar/expanded_y", 120),
+            expanded_y=self._int("sidebar/expanded_y", 0),
             dock_side=dock_side,
             panel_state=panel_state,
             visible_edge_px=max(1, self._int("sidebar/visible_edge_px", 8)),
