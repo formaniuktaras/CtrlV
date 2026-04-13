@@ -40,11 +40,14 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
 OutputDir={#InstallerOutputDir}
-OutputBaseFilename={#MyAppName}-Setup-{#MyAppVersion}-x64
+OutputBaseFilename={#MyAppName}-Setup-{#MyAppVersion}
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 ChangesAssociations=no
+CloseApplications=yes
+CloseApplicationsFilter={#MyAppExeName}
+RestartApplications=no
 
 #if AppIconPath != ""
 SetupIconFile={#AppIconPath}
@@ -66,9 +69,8 @@ Name: "{autodesktop}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; Tasks: 
 Name: "{userstartup}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; Parameters: "--startup"; Tasks: autostart; WorkingDir: "{app}"
 
 [Run]
-Filename: "{app}\\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-; User settings are preserved intentionally.
-; Type: filesandordirs; Name: "{localappdata}\\CtrlV"
+; User settings/logs are preserved intentionally (AppData).
 Type: files; Name: "{userstartup}\\{#MyAppName}.lnk"

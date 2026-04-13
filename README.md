@@ -10,65 +10,62 @@ It keeps your recent copied items close at hand and helps you quickly copy any i
 - Collapsed edge state to keep the panel out of the way.
 - Auto-hide with reveal on mouse hover near the screen edge.
 - System tray control for runtime actions and recovery.
-- Launch at Windows startup (shortcut with `--startup`).
-- Single-instance behavior (opening CtrlV again focuses the running app).
+- Launch at Windows startup (single canonical Startup shortcut with `--startup`).
+- Single-instance behavior (second launch never creates a second tray icon).
 - Rotating UTF-8 file logs for diagnostics.
-
-## Tray Menu
-
-- Show sidebar / Hide sidebar
-- Settings...
-- Always on top
-- Auto-hide
-- Launch at startup
-- Reset panel position/state
-- Open logs folder
-- Clear history
-- Quit
-
-All checkable tray items stay synchronized with Settings window state.
-
-## Logging
-
-CtrlV writes logs to a user-specific app data path (not current working directory):
-
-- `%LOCALAPPDATA%\CtrlV\logs\ctrlv.log`
-
-Log file uses rotation (`ctrlv.log` + backups) and includes startup, shutdown, tray/actions, autostart updates, recovery actions, single-instance events, and unhandled exceptions.
 
 ## Installation
 
 ### Option 1 — Installer (recommended)
 
-1. Download the latest `CtrlV-Setup-<version>-x64.exe` from releases.
-2. Run the installer and complete setup.
-3. Start CtrlV from Start Menu or desktop shortcut.
+1. Download `CtrlV-Setup-<version>.exe`.
+2. Run installer.
+3. Optionally choose:
+   - Desktop shortcut
+   - Launch at Windows startup
+4. Optionally launch CtrlV at the final installer step.
 
-Why installer is better for most users:
-
-- predictable install path and shortcuts;
-- cleaner uninstall flow;
-- easier first-run onboarding and startup integration.
+After install, CtrlV starts from Start Menu/Desktop and runs from `%LOCALAPPDATA%\Programs\CtrlV`.
 
 ### Option 2 — Portable
 
-1. Download the portable archive/folder build.
-2. Extract it to any local folder.
-3. Run the CtrlV executable.
+1. Download portable folder build.
+2. Extract to any local folder.
+3. Run `CtrlV.exe` directly.
 
-Portable is best for advanced/manual workflows.
+Portable keeps manual workflow; installer gives cleaner OS integration.
 
-## Troubleshooting
+## Startup and Tray Behavior
 
-- **App “doesn't open”:** check system tray first. CtrlV may already be running hidden.
-- **Second launch does nothing:** single-instance mode sends focus/show request to existing instance.
-- **Sidebar disappeared or moved off-screen:** use **Reset panel position/state** from tray menu or Settings → Advanced.
-- **Startup behavior is wrong:** verify **Launch at startup** and **Start minimized to tray** in Settings.
-- **Need diagnostics:** open tray menu → **Open logs folder** and inspect `ctrlv.log`.
+- Startup shortcut source of truth is:
+  `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\CtrlV.lnk`
+- CtrlV verifies autostart by target path + `--startup` args + working directory.
+- Login autostart launches tray-first/minimized behavior (no aggressive full-window pop).
+- Manual launch shows sidebar normally (unless you enabled start minimized setting).
+- If CtrlV is already running, second launch exits; manual launch additionally asks running instance to show sidebar.
+
+## Logs
+
+CtrlV writes logs to:
+
+- `%LOCALAPPDATA%\CtrlV\logs\ctrlv.log`
+
+Use tray menu → **Open logs folder** for quick access.
+
+## Recovery / Troubleshooting
+
+- **Panel disappeared:** tray menu → **Reset panel position/state**.
+- **App seems closed:** check system tray (X hides to tray by default).
+- **Startup mismatch:** verify **Launch at startup** in tray/settings.
+- **Second launch “does nothing”:** expected single-instance behavior.
+
+## Uninstall behavior
+
+Uninstall removes installed app files and installer-created shortcuts (including CtrlV startup shortcut).
+
+Uninstall intentionally does **not** purge user profile data by default (settings/logs/history) for safer reinstall diagnostics.
 
 ## Development
-
-Run from source (PowerShell):
 
 ```powershell
 python -m venv .venv
@@ -79,18 +76,15 @@ python -m app.main
 
 Useful launch arguments:
 
-- `--startup` — start minimized to tray (used by autostart shortcut).
-- `--minimized` — start minimized behavior for manual testing.
+- `--startup` — autostart/login path (tray-first behavior).
+- `--minimized` — manual minimized behavior test.
 
 ## Build / Packaging
 
-CtrlV uses:
-
-- **PyInstaller** for Windows executable packaging.
-- **Inno Setup** for installer creation.
-- **PowerShell scripts** for repeatable build steps.
-
-Detailed packaging notes: `packaging/README.md`.
+- PyInstaller: portable onedir build.
+- Inno Setup: per-user installer.
+- Build scripts: `packaging/scripts/*.ps1`.
+- Detailed notes: `packaging/README.md`.
 
 ## License
 

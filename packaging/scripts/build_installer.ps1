@@ -55,7 +55,7 @@ $args = @(
 & $iscc @args
 Assert-CommandSucceeded -CommandName 'Inno Setup (ISCC)'
 
-$expectedInstaller = Join-Path $releaseInstallerDir ("{0}-Setup-{1}-x64.exe" -f $appName, $version)
+$expectedInstaller = Join-Path $releaseInstallerDir ("{0}-Setup-{1}.exe" -f $appName, $version)
 if (-not (Test-Path $expectedInstaller)) {
     throw "Installer build completed but expected artifact is missing: $expectedInstaller"
 }
