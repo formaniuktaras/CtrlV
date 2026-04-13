@@ -51,6 +51,7 @@ class MainWindow(QMainWindow):
         self._monitor.seed_with_current_clipboard()
 
     def clear_history(self) -> None:
+        LOGGER.info("History cleared by user action")
         self._store.clear()
         self._refresh_history()
 

@@ -20,6 +20,7 @@ class SingleInstanceService(QObject):
 
     def try_acquire_primary(self) -> bool:
         if self._try_notify_primary():
+            LOGGER.info("Secondary instance detected; notified primary instance")
             return False
 
         QLocalServer.removeServer(self._server_name)
@@ -30,6 +31,7 @@ class SingleInstanceService(QObject):
 
         server.newConnection.connect(self._on_new_connection)
         self._server = server
+        LOGGER.info("Primary single-instance server acquired: %s", self._server_name)
         return True
 
     def shutdown(self) -> None:
@@ -66,4 +68,5 @@ class SingleInstanceService(QObject):
         socket.deleteLater()
 
         if message == "show":
+            LOGGER.info("Primary instance activation request received")
             self.activation_requested.emit()

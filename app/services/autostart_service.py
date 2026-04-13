@@ -14,6 +14,13 @@ class AutostartError(RuntimeError):
 
 
 @dataclass(slots=True)
+class ShortcutMetadata:
+    target_path: str
+    arguments: str
+    working_directory: str
+
+
+@dataclass(slots=True)
 class AutostartService:
     """Windows per-user autostart management via Startup-folder shortcut."""
 
@@ -35,22 +42,25 @@ class AutostartService:
         return os.name == "nt" and bool(os.environ.get("APPDATA"))
 
     def is_enabled(self) -> bool:
-        if not self.is_supported():
+        if not self.is_supported() or not self._shortcut_path.exists():
             return False
-        if not self._shortcut_path.exists():
+
+        metadata = self._read_shortcut_metadata(self._shortcut_path)
+        if metadata is None:
             return False
-        return self._shortcut_points_to_executable()
+        return self._matches_expected_shortcut(metadata)
 
     def enable(self) -> None:
         if not self.is_supported():
             raise AutostartError("Autostart is supported on Windows only.")
 
         self._startup_dir.mkdir(parents=True, exist_ok=True)
-        self._cleanup_duplicate_shortcuts()
         self._create_shortcut()
+        self._cleanup_duplicate_shortcuts()
 
         if not self.is_enabled():
             raise AutostartError("Autostart shortcut was created but verification failed.")
+        LOGGER.info("Autostart enabled")
 
     def disable(self) -> None:
         if not self.is_supported():
@@ -59,25 +69,46 @@ class AutostartService:
         if self._shortcut_path.exists():
             self._shortcut_path.unlink()
 
-        self._cleanup_duplicate_shortcuts()
+        self._cleanup_duplicate_shortcuts(remove_all_matching=True)
+        LOGGER.info("Autostart disabled")
 
-    def _cleanup_duplicate_shortcuts(self) -> None:
+    def _cleanup_duplicate_shortcuts(self, remove_all_matching: bool = False) -> None:
         if not self._startup_dir.exists():
             return
 
         for candidate in self._startup_dir.glob(f"{self.app_name}*.lnk"):
-            if candidate == self._shortcut_path:
+            metadata = self._read_shortcut_metadata(candidate)
+            if metadata is None:
                 continue
-            if self._shortcut_target_matches(candidate):
+
+            if not self._matches_target_executable(metadata):
+                continue
+
+            is_primary = candidate == self._shortcut_path
+            if is_primary and not remove_all_matching:
+                continue
+
+            if self._matches_expected_shortcut(metadata) or remove_all_matching:
                 LOGGER.info("Removing duplicate startup shortcut: %s", candidate)
                 candidate.unlink(missing_ok=True)
 
-    def _shortcut_points_to_executable(self) -> bool:
-        return self._shortcut_target_matches(self._shortcut_path)
+    def _matches_expected_shortcut(self, metadata: ShortcutMetadata) -> bool:
+        expected_target = str(self.executable_path).lower()
+        expected_args = self.startup_argument.strip().lower()
+        expected_workdir = str(self.executable_path.parent).lower()
 
-    def _shortcut_target_matches(self, shortcut_path: Path) -> bool:
+        return (
+            metadata.target_path.lower() == expected_target
+            and metadata.arguments.strip().lower() == expected_args
+            and metadata.working_directory.lower() == expected_workdir
+        )
+
+    def _matches_target_executable(self, metadata: ShortcutMetadata) -> bool:
+        return metadata.target_path.lower() == str(self.executable_path).lower()
+
+    def _read_shortcut_metadata(self, shortcut_path: Path) -> ShortcutMetadata | None:
         if not shortcut_path.exists():
-            return False
+            return None
 
         command = self._build_read_command(shortcut_path)
         try:
@@ -88,10 +119,17 @@ class AutostartService:
 
         if result.returncode != 0:
             LOGGER.warning("Failed to inspect shortcut %s: %s", shortcut_path, result.stderr.strip())
-            return False
+            return None
 
-        target = result.stdout.strip().strip('"').lower()
-        return target == str(self.executable_path).lower()
+        lines = [line.strip().strip('"') for line in result.stdout.splitlines()]
+        if len(lines) < 3:
+            return None
+
+        return ShortcutMetadata(
+            target_path=lines[0],
+            arguments=lines[1],
+            working_directory=lines[2],
+        )
 
     def _create_shortcut(self) -> None:
         command = self._build_create_command()
@@ -133,6 +171,8 @@ class AutostartService:
             "$ws=New-Object -ComObject WScript.Shell;"
             "$sc=$ws.CreateShortcut($shortcutPath);"
             "Write-Output $sc.TargetPath;"
+            "Write-Output $sc.Arguments;"
+            "Write-Output $sc.WorkingDirectory;"
         )
         return ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script]
 
