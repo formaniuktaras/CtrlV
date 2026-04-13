@@ -22,6 +22,8 @@ class ClipboardItem:
     preview_text: str
     id: str = field(default_factory=lambda: str(uuid4()))
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    pinned: bool = False
+    pinned_order: int | None = None
     text_content: str | None = None
     image: QImage | None = None
     image_thumbnail: QPixmap | None = None
@@ -30,3 +32,21 @@ class ClipboardItem:
     def secondary_text(self) -> str:
         timestamp = self.created_at.astimezone().strftime("%H:%M:%S")
         return f"{self.item_type.value.upper()} • {timestamp}"
+
+    @property
+    def content(self) -> str:
+        if self.item_type is ClipboardItemType.TEXT and self.text_content is not None:
+            return self.text_content
+        if self.item_type is ClipboardItemType.FILES and self.file_paths:
+            return "\n".join(self.file_paths)
+        if self.item_type is ClipboardItemType.IMAGE and self.image is not None:
+            return f"image:{self.image.width()}x{self.image.height()}"
+        return self.preview_text
+
+    @property
+    def type(self) -> ClipboardItemType:
+        return self.item_type
+
+    @property
+    def timestamp(self) -> datetime:
+        return self.created_at
