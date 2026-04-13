@@ -125,12 +125,11 @@ class WindowBehaviorController(QObject):
 
     def reset_position_state(self) -> None:
         self._settings.width = 420
-        self._settings.height = 640
-        self._settings.expanded_y = 120
+        self._settings.height = 0
+        self._settings.expanded_y = 0
         self._settings.panel_state = PanelState.EXPANDED
-        self._window.resize(self._settings.width, self._settings.height)
         self._dock.apply_settings(self._settings)
-        self._dock.restore_position(prefer_collapsed=False)
+        self._dock.apply_docked_geometry(prefer_collapsed=False)
         self._persist_sidebar_settings()
 
     def expand_panel(self) -> None:
@@ -194,7 +193,15 @@ class WindowBehaviorController(QObject):
         return False
 
     def _apply_initial_geometry(self) -> None:
-        self._window.resize(self._settings.width, self._settings.height)
+        width = max(self._window.minimumWidth(), self._settings.width)
+        self._window.resize(width, self._window.height())
+        self._dock.apply_docked_geometry(prefer_collapsed=self._settings.panel_state == PanelState.COLLAPSED)
+
+    def ensure_docked_geometry(self, prefer_collapsed: bool | None = None) -> None:
+        if self._dock.runtime_state == RuntimeState.FLOATING:
+            return
+        self._dock.apply_docked_geometry(prefer_collapsed=prefer_collapsed)
+        self._persist_sidebar_settings()
 
     def _configure_window_flags(self) -> None:
         self._window.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)

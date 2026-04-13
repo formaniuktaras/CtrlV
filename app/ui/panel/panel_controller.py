@@ -120,6 +120,9 @@ class PanelController(QObject):
         )
 
     def show_panel(self) -> None:
+        if self.snapshot.dock_state != DockState.FLOATING:
+            self._behavior.ensure_docked_geometry(prefer_collapsed=False)
+
         if not self._window.isVisible():
             self._window.show()
             self._window.raise_()
@@ -224,6 +227,9 @@ class PanelController(QObject):
 
     def _on_visibility_changed(self, visible: bool) -> None:
         if visible:
+            if self.snapshot.dock_state != DockState.FLOATING:
+                prefer_collapsed = self.snapshot.panel_mode == PanelMode.COLLAPSED
+                self._behavior.ensure_docked_geometry(prefer_collapsed=prefer_collapsed)
             self._behavior.start_hover_tracking()
         else:
             self._behavior.stop_hover_tracking()
