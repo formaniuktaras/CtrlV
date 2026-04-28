@@ -76,7 +76,7 @@ class SettingsService:
         self._settings.sync()
 
     def load_start_minimized_to_tray(self) -> bool:
-        return self._bool("app/start_minimized_to_tray", False)
+        return self._bool("app/start_minimized_to_tray", True)
 
     def save_start_minimized_to_tray(self, enabled: bool) -> None:
         self._settings.setValue("app/start_minimized_to_tray", enabled)

@@ -30,6 +30,7 @@ class AppLifecycleController(QObject):
         settings_service: SettingsService,
         autostart_service: AutostartService,
         settings_controller: SettingsController,
+        launch_from_startup: bool,
         start_minimized: bool,
         paste_service: PasteService,
     ) -> None:
@@ -41,6 +42,7 @@ class AppLifecycleController(QObject):
         self._settings_service = settings_service
         self._autostart_service = autostart_service
         self._settings_controller = settings_controller
+        self._launch_from_startup = launch_from_startup
         self._start_minimized = start_minimized
         self._paste_service = paste_service
 
@@ -70,7 +72,12 @@ class AppLifecycleController(QObject):
         self._sync_runtime_state()
 
     def start(self) -> None:
-        LOGGER.info("Lifecycle start (start_minimized=%s, tray_enabled=%s)", self._start_minimized, self._tray_enabled)
+        LOGGER.info(
+            "Lifecycle start (launch_from_startup=%s, start_minimized=%s, tray_enabled=%s)",
+            self._launch_from_startup,
+            self._start_minimized,
+            self._tray_enabled,
+        )
         if self._start_minimized and self._tray_enabled:
             self.hide_sidebar()
             return

@@ -62,7 +62,7 @@ class AutostartService:
 
         if not self.is_enabled():
             raise AutostartError("Autostart shortcut was created but verification failed.")
-        LOGGER.info("Autostart enabled")
+        LOGGER.info("Autostart enabled (shortcut=%s, args=%s)", self._shortcut_path, self.startup_argument)
 
     def disable(self) -> None:
         if not self.is_supported():

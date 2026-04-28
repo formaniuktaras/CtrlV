@@ -36,7 +36,9 @@ class SettingsWindow(QDialog):
         self._launch_at_startup_hint = QLabel("Creates a Startup shortcut that launches CtrlV with --startup.")
 
         self._start_minimized = QCheckBox("Start minimized to tray")
-        self._start_minimized_hint = QLabel("On manual launch, keep sidebar hidden until you open it from tray.")
+        self._start_minimized_hint = QLabel(
+            "Applies only to Windows startup launches (CtrlV.exe --startup). Manual launch always opens the UI."
+        )
 
         self._always_on_top = QCheckBox("Always on top")
 
