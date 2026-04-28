@@ -7,7 +7,6 @@ import sys
 import time
 from dataclasses import dataclass
 
-from app.core.models import ClipboardItem, ClipboardItemType
 from app.services.clipboard_service import ClipboardService
 
 LOGGER = logging.getLogger(__name__)
@@ -77,24 +76,6 @@ class PasteService:
             _format_hwnd(hwnd),
             _format_hwnd(previous) if previous else "None",
         )
-
-    def paste_item(self, item: ClipboardItem) -> bool:
-        LOGGER.info("Action=paste_item item_id=%s item_type=%s", item.id, item.item_type.value)
-
-        if item.item_type is not ClipboardItemType.TEXT:
-            LOGGER.warning("Action=paste_item skipped_non_text item_id=%s item_type=%s", item.id, item.item_type.value)
-            return False
-
-        restored = self._clipboard_service.restore_item(item)
-        if not restored:
-            LOGGER.warning("Action=paste_item restore_failed item_id=%s", item.id)
-            return False
-
-        try:
-            return self.paste_clipboard_to_previous_window()
-        except Exception:
-            LOGGER.exception("Action=paste_item unexpected_exception item_id=%s", item.id)
-            return False
 
     def paste_clipboard_to_previous_window(self) -> bool:
         if not self._supported:
