@@ -40,8 +40,8 @@ Portable keeps manual workflow; installer gives cleaner OS integration.
 - Startup shortcut source of truth is:
   `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\CtrlV.lnk`
 - CtrlV verifies autostart by target path + `--startup` args + working directory.
-- Login autostart launches tray-first/minimized behavior (no aggressive full-window pop).
-- Manual launch shows sidebar normally (unless you enabled start minimized setting).
+- Login autostart (`--startup`) launches tray-first/minimized behavior (no aggressive full-window pop).
+- Manual launch always shows sidebar/UI.
 - If CtrlV is already running, second launch exits; manual launch additionally asks running instance to show sidebar.
 
 ## Logs
@@ -74,10 +74,9 @@ pip install -r requirements.txt
 python -m app.main
 ```
 
-Useful launch arguments:
+Useful launch argument:
 
 - `--startup` — autostart/login path (tray-first behavior).
-- `--minimized` — manual minimized behavior test.
 
 ## Build / Packaging
 

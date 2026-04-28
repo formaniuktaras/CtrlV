@@ -41,7 +41,7 @@ def create_application(argv: Sequence[str]) -> QApplication:
 
     args = set(argv[1:])
     startup_invocation = "--startup" in args
-    start_minimized = startup_invocation or "--minimized" in args
+    launch_from_startup = startup_invocation
 
     single_instance = SingleInstanceService(server_name=f"{APP_NAME}_single_instance", parent=app)
     activation_message = "" if startup_invocation else "show"
@@ -57,7 +57,7 @@ def create_application(argv: Sequence[str]) -> QApplication:
     paste_service = PasteService(clipboard_service=service)
     monitor = ClipboardMonitor(clipboard=clipboard, parser=parser, store=store)
     settings_service = SettingsService()
-    start_minimized = start_minimized or settings_service.load_start_minimized_to_tray()
+    start_minimized = launch_from_startup and settings_service.load_start_minimized_to_tray()
     autostart_service = AutostartService(app_name=APP_NAME, executable_path=_runtime_executable_path())
 
     window = MainWindow(
@@ -89,6 +89,7 @@ def create_application(argv: Sequence[str]) -> QApplication:
         settings_service=settings_service,
         autostart_service=autostart_service,
         settings_controller=settings_controller,
+        launch_from_startup=launch_from_startup,
         start_minimized=start_minimized,
         paste_service=paste_service,
     )
