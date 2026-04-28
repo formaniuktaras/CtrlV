@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QTimer, Qt, Signal
 from PySide6.QtGui import QCloseEvent, QHideEvent, QShowEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -19,6 +20,7 @@ from app.core.clipboard_monitor import ClipboardMonitor
 from app.core.history_store import HistoryStore
 from app.core.models import ClipboardItem
 from app.services.clipboard_service import ClipboardService
+from app.services.paste_service import PasteService
 from app.ui.history_list import HistoryListWidget
 
 LOGGER = logging.getLogger(__name__)
@@ -33,11 +35,15 @@ class MainWindow(QMainWindow):
         store: HistoryStore,
         service: ClipboardService,
         monitor: ClipboardMonitor,
+        paste_service: PasteService,
+        hide_panel_callback: Callable[[], None] | None = None,
     ) -> None:
         super().__init__()
         self._store = store
         self._service = service
         self._monitor = monitor
+        self._paste_service = paste_service
+        self._hide_panel_callback = hide_panel_callback
 
         self._drag_handle = QWidget(self)
         self._tabs = QTabWidget(self)
@@ -45,13 +51,16 @@ class MainWindow(QMainWindow):
         self._pinned_list = HistoryListWidget(self)
         self._status_label = QLabel(self)
         self._status_label.setObjectName("metaLabel")
-        self._restore_button = QPushButton("Copy selected again", self)
+        self._restore_button = QPushButton("Copy to clipboard", self)
         self._clear_button = QPushButton("Clear", self)
 
         self._setup_ui()
         self._connect_signals()
         self._refresh_history()
         self._monitor.seed_with_current_clipboard()
+
+    def set_hide_panel_callback(self, callback: Callable[[], None]) -> None:
+        self._hide_panel_callback = callback
 
     def clear_history(self) -> None:
         LOGGER.info("History cleared by user action")
@@ -110,15 +119,15 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
     def _connect_signals(self) -> None:
-        self._restore_button.clicked.connect(self._restore_selected)
+        self._restore_button.clicked.connect(self._copy_selected_to_clipboard)
         self._clear_button.clicked.connect(self.clear_history)
-        self._history_list.itemDoubleClicked.connect(lambda _: self._restore_selected())
-        self._history_list.restore_requested.connect(self._restore_selected)
+        self._history_list.itemDoubleClicked.connect(lambda _: self._paste_selected())
+        self._history_list.restore_requested.connect(self._paste_selected)
         self._history_list.pin_toggled.connect(self._toggle_pin)
         self._history_list.delete_requested.connect(self._delete_item)
 
-        self._pinned_list.itemDoubleClicked.connect(lambda _: self._restore_selected())
-        self._pinned_list.restore_requested.connect(self._restore_selected)
+        self._pinned_list.itemDoubleClicked.connect(lambda _: self._paste_selected())
+        self._pinned_list.restore_requested.connect(self._paste_selected)
         self._pinned_list.pin_toggled.connect(self._toggle_pin)
         self._pinned_list.delete_requested.connect(self._delete_item)
 
@@ -142,17 +151,43 @@ class MainWindow(QMainWindow):
         self._pinned_list.set_items(pinned_items)
         self._status_label.setText(f"Items: {len(all_items)} • Pinned: {len(pinned_items)}")
 
-    def _restore_selected(self) -> None:
+    def _copy_selected_to_clipboard(self) -> None:
         current_list = self._history_list if self._tabs.currentIndex() == 0 else self._pinned_list
         item = current_list.selected_item()
         if item is None:
             return
+
         self._monitor.mark_programmatic_fingerprint(item.fingerprint)
         restored = self._service.restore_item(item)
         if restored:
-            self._status_label.setText(f"Restored item: {item.item_type.value}")
+            self._status_label.setText(f"Copied to clipboard: {item.item_type.value}")
         else:
-            self._status_label.setText("Failed to restore selected item")
+            self._status_label.setText("Failed to copy selected item")
+
+    def _paste_selected(self) -> None:
+        current_list = self._history_list if self._tabs.currentIndex() == 0 else self._pinned_list
+        item = current_list.selected_item()
+        if item is None:
+            return
+
+        self._monitor.mark_programmatic_fingerprint(item.fingerprint)
+        restored = self._service.restore_item(item)
+        if not restored:
+            self._status_label.setText("Failed to copy selected item")
+            return
+
+        self._status_label.setText("Copied to clipboard. Pasting into previous window…")
+        if self._hide_panel_callback is not None:
+            self._hide_panel_callback()
+
+        QTimer.singleShot(150, self._finalize_paste)
+
+    def _finalize_paste(self) -> None:
+        pasted = self._paste_service.paste_clipboard_to_previous_window()
+        if pasted:
+            self._status_label.setText("Pasted into previous window")
+        else:
+            self._status_label.setText("Copied to clipboard. Paste manually with Ctrl+V.")
 
     def _toggle_pin(self, item_id: str) -> None:
         if self._service.toggle_pin(item_id):
