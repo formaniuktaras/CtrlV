@@ -68,7 +68,7 @@ class HistoryListWidget(QListWidget):
 
         if event.key() == Qt.Key.Key_Delete:
             item = self.selected_item()
-            if item is not None and not item.pinned:
+            if item is not None:
                 self.delete_requested.emit(item.id)
             event.accept()
             return

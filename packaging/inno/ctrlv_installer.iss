@@ -60,7 +60,6 @@ SetupIconFile={#AppIconPath}
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"
 Name: "autostart"; Description: "Launch CtrlV when Windows starts"; GroupDescription: "Startup options:"
 
 [Files]
@@ -69,7 +68,7 @@ Source: "{#PortableDir}\\*"; DestDir: "{app}"; Flags: recursesubdirs createallsu
 [Icons]
 Name: "{group}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; WorkingDir: "{app}"
 Name: "{group}\\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; Tasks: desktopicon; WorkingDir: "{app}"
+Name: "{autodesktop}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; WorkingDir: "{app}"
 Name: "{userstartup}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; Parameters: "--startup"; Tasks: autostart; WorkingDir: "{app}"
 
 [Run]

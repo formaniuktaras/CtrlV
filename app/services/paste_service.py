@@ -70,8 +70,13 @@ class PasteService:
             LOGGER.debug("Skipped foreground remember for internal window: %s", _format_hwnd(hwnd))
             return
 
+        previous = self._last_foreground_window
         self._last_foreground_window = hwnd
-        LOGGER.info("Remembered foreground window: hwnd=%s", _format_hwnd(hwnd))
+        LOGGER.info(
+            "Action=remember_foreground remembered_hwnd=%s previous_hwnd=%s",
+            _format_hwnd(hwnd),
+            _format_hwnd(previous) if previous else "None",
+        )
 
     def paste_item(self, item: ClipboardItem) -> bool:
         LOGGER.info("Action=paste_item item_id=%s item_type=%s", item.id, item.item_type.value)
@@ -93,32 +98,37 @@ class PasteService:
 
     def paste_clipboard_to_previous_window(self) -> bool:
         if not self._supported:
-            LOGGER.warning("Action=paste platform_unsupported platform=%s", sys.platform)
+            LOGGER.warning("Action=paste_failed reason=platform_unsupported platform=%s", sys.platform)
             return False
 
         target_hwnd = self._last_foreground_window
+        LOGGER.info("Action=paste_start remembered_hwnd=%s", _format_hwnd(target_hwnd) if target_hwnd else "None")
         if target_hwnd is None:
-            LOGGER.warning("Action=paste failed reason=no_remembered_window")
+            LOGGER.warning("Action=paste_failed reason=no_remembered_window")
             return False
 
         validation = self._validate_target(target_hwnd)
+        LOGGER.info(
+            "Action=target_validation target_hwnd=%s result=%s reason=%s",
+            _format_hwnd(target_hwnd),
+            validation.is_valid,
+            validation.reason,
+        )
         if not validation.is_valid:
-            LOGGER.warning(
-                "Action=paste failed reason=%s target_hwnd=%s", validation.reason, _format_hwnd(target_hwnd)
-            )
+            LOGGER.warning("Action=paste_failed reason=%s target_hwnd=%s", validation.reason, _format_hwnd(target_hwnd))
             return False
 
-        LOGGER.info("Action=paste focus_restore_start target_hwnd=%s", _format_hwnd(target_hwnd))
+        LOGGER.info("Action=focus_restore_start target_hwnd=%s", _format_hwnd(target_hwnd))
         if not self.restore_foreground_window(target_hwnd):
-            LOGGER.warning("Action=paste failed reason=focus_restore_failed target_hwnd=%s", _format_hwnd(target_hwnd))
+            LOGGER.warning("Action=paste_failed reason=focus_restore_failed target_hwnd=%s", _format_hwnd(target_hwnd))
             return False
 
         time.sleep(self._paste_delay_sec)
         pasted = self.send_ctrl_v()
         if pasted:
-            LOGGER.info("Action=paste success target_hwnd=%s", _format_hwnd(target_hwnd))
+            LOGGER.info("Action=paste_success target_hwnd=%s", _format_hwnd(target_hwnd))
         else:
-            LOGGER.warning("Action=paste failed reason=send_input_failed target_hwnd=%s", _format_hwnd(target_hwnd))
+            LOGGER.warning("Action=paste_failed reason=send_input_failed target_hwnd=%s", _format_hwnd(target_hwnd))
         return pasted
 
     def restore_foreground_window(self, target_hwnd: int) -> bool:
@@ -133,10 +143,14 @@ class PasteService:
             return False
 
         if self._try_direct_focus_restore(target_hwnd):
+            LOGGER.info("Action=focus_restore mode=direct target_hwnd=%s", _format_hwnd(target_hwnd))
             return True
 
-        LOGGER.info("Action=focus_restore using_attach_thread_input target_hwnd=%s", _format_hwnd(target_hwnd))
-        return self._try_attach_thread_input_fallback(target_hwnd)
+        LOGGER.info("Action=focus_restore mode=fallback_attach_thread_input target_hwnd=%s", _format_hwnd(target_hwnd))
+        restored = self._try_attach_thread_input_fallback(target_hwnd)
+        if restored:
+            LOGGER.info("Action=focus_restore mode=fallback_success target_hwnd=%s", _format_hwnd(target_hwnd))
+        return restored
 
     def send_ctrl_v(self) -> bool:
         if not self._supported:
@@ -150,6 +164,7 @@ class PasteService:
                 self._keyboard_input(win32con.VK_CONTROL, key_up=True),
             )
             sent = USER32.SendInput(len(inputs), (INPUT * len(inputs))(*inputs), ctypes.sizeof(INPUT))
+            LOGGER.info("Action=send_ctrl_v sent=%s expected=%s", sent, len(inputs))
             return sent == len(inputs)
         except Exception:
             LOGGER.exception("Action=send_ctrl_v exception")

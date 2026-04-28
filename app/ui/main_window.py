@@ -67,6 +67,7 @@ class MainWindow(QMainWindow):
         LOGGER.info("Action=clear_history")
         self._service.clear_history(preserve_pinned=True)
         self._refresh_history()
+        self._status_label.setText("History cleared. Pinned items preserved.")
 
     def shutdown(self) -> None:
         pass
@@ -209,10 +210,10 @@ class MainWindow(QMainWindow):
         if self._hide_panel_callback is not None:
             self._hide_panel_callback()
 
-        QTimer.singleShot(self._paste_delay_ms, lambda: self._finalize_paste(item))
+        QTimer.singleShot(self._paste_delay_ms, self._finalize_paste)
 
-    def _finalize_paste(self, item: ClipboardItem) -> None:
-        pasted = self._paste_service.paste_item(item)
+    def _finalize_paste(self) -> None:
+        pasted = self._paste_service.paste_clipboard_to_previous_window()
         if pasted:
             self._status_label.setText("Pasted into previous window")
         else:
@@ -235,8 +236,15 @@ class MainWindow(QMainWindow):
             LOGGER.debug("Action=delete_item normalized_selected_id=%s requested_id=%s", target_id, item_id)
 
         LOGGER.info("Action=delete_item item_id=%s item_type=%s", selected_item.id, selected_item.item_type.value)
+        if selected_item.pinned:
+            self._status_label.setText("Pinned item cannot be deleted. Unpin it first.")
+            return
+
         if self._service.delete_item(target_id):
             self._refresh_history()
+            self._status_label.setText("Item deleted")
+        else:
+            self._status_label.setText("Could not delete selected item")
 
     def _on_selection_changed(self, source: HistoryListWidget) -> None:
         if source is not self._active_list():
