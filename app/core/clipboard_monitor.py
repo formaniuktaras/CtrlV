@@ -24,9 +24,10 @@ class ClipboardMonitor:
 
     def mark_programmatic_fingerprint(self, fingerprint: str) -> None:
         self._ignored_fingerprint = fingerprint
+        LOGGER.info("Action=clipboard_restore fingerprint=%s", fingerprint)
 
     def _on_clipboard_changed(self) -> None:
-        LOGGER.info("Clipboard changed")
+        LOGGER.info("Action=clipboard_changed")
         mime_data = self._clipboard.mimeData()
         if mime_data is None:
             return
@@ -41,9 +42,9 @@ class ClipboardMonitor:
         if item is None:
             return
 
-        LOGGER.info("Item parsed: %s", item.item_type.value)
+        LOGGER.info("Action=clipboard_item_parsed item_type=%s", item.item_type.value)
         if self._ignored_fingerprint and item.fingerprint == self._ignored_fingerprint:
-            LOGGER.info("Self-trigger skipped: %s", item.fingerprint)
+            LOGGER.info("Action=clipboard_self_trigger_skipped fingerprint=%s", item.fingerprint)
             self._ignored_fingerprint = None
             return
 

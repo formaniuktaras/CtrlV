@@ -22,7 +22,7 @@ if (-not (Test-Path $specFile)) {
 
 $pyInstaller = Get-Command pyinstaller -ErrorAction SilentlyContinue
 if (-not $pyInstaller) {
-    throw 'PyInstaller is not available. Activate the virtual environment and install build requirements.'
+    throw 'PyInstaller is not available. Activate your virtual environment and run: pip install -r packaging/requirements-build.txt'
 }
 
 Write-Host "   PyInstaller: $($pyInstaller.Source)"

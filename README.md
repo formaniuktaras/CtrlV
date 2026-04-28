@@ -1,90 +1,171 @@
 # CtrlV
 
-CtrlV — lightweight clipboard manager for Windows with a docked sidebar and system tray control.
-It keeps your recent copied items close at hand and helps you quickly copy any item back to the clipboard.
+CtrlV is a Windows clipboard manager with a docked sidebar, tray control, and a fast restore/paste workflow for previously copied items.
+
+## What CtrlV does
+
+CtrlV keeps a local clipboard history and lets you reuse old clipboard content without leaving your current task.
+
+- Tracks clipboard history for text, images, and file lists.
+- Lets you select an old item and copy it back to the clipboard.
+- Can auto-paste **text** items into the previously active external window.
+- Runs in the system tray and supports show/hide control from tray.
 
 ## Key Features
 
-- Clipboard history for text, images, and file lists.
-- Sidebar panel that docks to the left or right screen edge.
-- Collapsed edge state to keep the panel out of the way.
-- Auto-hide with reveal on mouse hover near the screen edge.
-- System tray control for runtime actions and recovery.
-- Launch at Windows startup (single canonical Startup shortcut with `--startup`).
-- Single-instance behavior (second launch never creates a second tray icon).
-- Rotating UTF-8 file logs for diagnostics.
+- Clipboard history for text/images/files.
+- Docked sidebar panel.
+- Auto-hide with hover reveal.
+- System tray control.
+- Copy-only and auto-paste workflows.
+- Startup launch support.
+- Single-instance behavior.
+- Logs and recovery actions.
+
+## User Actions
+
+| Action | Result |
+| --- | --- |
+| Single click item | Selects item only |
+| Double click text item | Copies and auto-pastes into previous window |
+| Double click image/file item | Copies only, user pastes manually |
+| Copy to clipboard | Copies selected item only |
+| Delete | Deletes selected unpinned item |
+| Pin/unpin | Keeps item available in Pinned |
+| Clear history | Clears history, preserves pinned items |
+| Tray left click | Shows/hides sidebar |
+| Window close X | Hides to tray |
+| Tray Quit | Exits CtrlV |
+
+## Auto-paste behavior
+
+- Auto-paste runs only for **text** items.
+- CtrlV remembers the previous **external** foreground window before showing the sidebar.
+- If Windows blocks focus restore, CtrlV still copies text into clipboard and shows a manual fallback message.
+- In that case, press `Ctrl+V` manually in your target app.
+- This fallback can happen because of Windows focus restrictions and does not always mean CtrlV is broken.
 
 ## Installation
 
-### Option 1 — Installer (recommended)
+### Recommended: Installer
 
-1. Download `CtrlV-Setup-<version>.exe`.
-2. Run installer.
-3. Optionally choose:
-   - Desktop shortcut
-   - Launch at Windows startup
-4. Optionally launch CtrlV at the final installer step.
+1. Download `CtrlV-Setup-{version}.exe`.
+2. Run the setup file.
+3. Complete installer steps.
+4. Launch CtrlV (enabled by default on the final installer screen).
 
-After install, CtrlV starts from Start Menu/Desktop and runs from `%LOCALAPPDATA%\Programs\CtrlV`.
+Installer behavior:
 
-### Option 2 — Portable
+- Installs to `%LOCALAPPDATA%\Programs\CtrlV`.
+- No admin rights required (per-user install).
+- Start Menu shortcut is always created.
+- Desktop shortcut is always created.
+- The only installer option is startup launch (`Launch CtrlV when Windows starts`).
 
-1. Download portable folder build.
-2. Extract to any local folder.
-3. Run `CtrlV.exe` directly.
+### Portable
 
-Portable keeps manual workflow; installer gives cleaner OS integration.
+1. Download the portable build folder.
+2. Extract it.
+3. Run `CtrlV.exe`.
 
-## Startup and Tray Behavior
+Portable vs installer:
 
-- Startup shortcut source of truth is:
+- Installer: better Windows integration (shortcuts, uninstall entry, startup option).
+- Portable: manual run and manual placement.
+
+## Startup and tray behavior
+
+- Startup shortcut target uses `CtrlV.exe --startup`.
+- Startup shortcut path:
   `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\CtrlV.lnk`
-- CtrlV verifies autostart by target path + `--startup` args + working directory.
-- Login autostart (`--startup`) launches tray-first/minimized behavior (no aggressive full-window pop).
-- Manual launch always shows sidebar/UI.
-- If CtrlV is already running, second launch exits; manual launch additionally asks running instance to show sidebar.
+- Startup launch runs tray-first/minimized when enabled in settings.
+- Manual launch shows the sidebar UI.
+- Second launch does not create a second tray icon (single-instance behavior).
 
-## Logs
-
-CtrlV writes logs to:
-
-- `%LOCALAPPDATA%\CtrlV\logs\ctrlv.log`
-
-Use tray menu → **Open logs folder** for quick access.
-
-## Recovery / Troubleshooting
-
-- **Panel disappeared:** tray menu → **Reset panel position/state**.
-- **App seems closed:** check system tray (X hides to tray by default).
-- **Startup mismatch:** verify **Launch at startup** in tray/settings.
-- **Second launch “does nothing”:** expected single-instance behavior.
-
-## Uninstall behavior
-
-Uninstall removes installed app files and installer-created shortcuts (including CtrlV startup shortcut).
-
-Uninstall intentionally does **not** purge user profile data by default (settings/logs/history) for safer reinstall diagnostics.
-
-## Development
+## Build from source
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+pip install -r packaging/requirements-build.txt
 python -m app.main
 ```
 
-Useful launch argument:
+## Build portable
 
-- `--startup` — autostart/login path (tray-first behavior).
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging/scripts/build_portable.ps1
+```
 
-## Build / Packaging
+Expected outputs:
 
-- PyInstaller: portable onedir build.
-- Inno Setup: per-user installer.
-- Build scripts: `packaging/scripts/*.ps1`.
-- Detailed notes: `packaging/README.md`.
+- `dist/CtrlV-portable/CtrlV.exe`
+- `release/portable/CtrlV-{version}-portable/`
+
+## Build installer
+
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging/scripts/build_installer.ps1
+```
+
+Expected output:
+
+- `release/installer/CtrlV-Setup-{version}.exe`
+
+## Build everything
+
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging/scripts/build_all.ps1
+```
+
+## Manual action test plan
+
+1. Open Notepad.
+2. Copy text `A`.
+3. Open CtrlV.
+4. Single-click an item → only selection should change.
+5. Click **Copy to clipboard** → clipboard updates, Notepad content does not change.
+6. Double-click a **text** item → CtrlV hides, Notepad receives pasted text.
+7. Double-click an **image/file** item → item is copied only, no auto-paste.
+8. Tray left click toggles sidebar show/hide.
+9. Window close (`X`) hides to tray.
+10. Tray **Quit** exits process.
+11. With startup enabled, after Windows reboot CtrlV starts tray-first/minimized.
+
+## Release checklist
+
+- [ ] App starts from source (`python -m app.main`).
+- [ ] Portable EXE starts by double-click.
+- [ ] Installer installs without admin rights.
+- [ ] Desktop shortcut works.
+- [ ] Start Menu shortcut works.
+- [ ] Tray icon appears.
+- [ ] Close (`X`) hides to tray.
+- [ ] Tray Quit exits app.
+- [ ] Startup shortcut works.
+- [ ] Double click text auto-pastes into Notepad.
+- [ ] Double click image/file copies only.
+- [ ] Logs folder opens from tray.
+
+## Logs
+
+- Log file: `%LOCALAPPDATA%\CtrlV\logs\ctrlv.log`
+- Tray action: **Open logs folder**
+
+## Troubleshooting
+
+- **Panel disappeared**: use tray → **Show sidebar** or **Reset panel position/state**.
+- **Auto-paste did not work**: CtrlV already copied text to clipboard; switch to target app and press `Ctrl+V` manually.
+- **App seems closed**: check system tray; close (`X`) can hide to tray.
+- **Second launch does nothing**: expected; CtrlV runs as a single instance.
+- **Startup does not work**: verify startup toggle in settings/tray and check Startup shortcut exists.
+- **Installer cannot replace files**: close running CtrlV (or use tray **Quit**) and rerun installer.
+
+## Uninstall
+
+Uninstall removes installed files and installer-created shortcuts, including the Startup shortcut. User data (logs/settings/history) is preserved unless manually deleted.
 
 ## License
 
-License terms are provided in `LICENSE`.
+See `LICENSE`.
