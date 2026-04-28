@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from app.core.clipboard_monitor import ClipboardMonitor
 from app.services.autostart_service import AutostartService
+from app.services.paste_service import PasteService
 from app.services.settings_service import SettingsService
 from app.services.tray_service import TrayMenuState, TrayService
 from app.ui.main_window import MainWindow
@@ -30,6 +31,7 @@ class AppLifecycleController(QObject):
         autostart_service: AutostartService,
         settings_controller: SettingsController,
         start_minimized: bool,
+        paste_service: PasteService,
     ) -> None:
         super().__init__(window)
         self._app = app
@@ -40,6 +42,7 @@ class AppLifecycleController(QObject):
         self._autostart_service = autostart_service
         self._settings_controller = settings_controller
         self._start_minimized = start_minimized
+        self._paste_service = paste_service
 
         self._tray_settings = self._settings_service.load_tray_settings()
         self._tray_service = TrayService(parent_widget=self._window)
@@ -62,6 +65,7 @@ class AppLifecycleController(QObject):
 
     def show_sidebar(self) -> None:
         LOGGER.info("Panel action: show sidebar")
+        self._paste_service.remember_foreground_window()
         self._panel_controller.show_panel()
         self._sync_runtime_state()
 
@@ -79,6 +83,8 @@ class AppLifecycleController(QObject):
 
     def toggle_sidebar(self) -> None:
         LOGGER.info("Panel action: toggle sidebar")
+        if self._panel_controller.snapshot.visibility == VisibilityState.HIDDEN:
+            self._paste_service.remember_foreground_window()
         self._panel_controller.toggle_panel()
         self._sync_runtime_state()
 

@@ -14,6 +14,7 @@ from app.core.history_store import HistoryStore
 from app.services.autostart_service import AutostartService
 from app.services.app_lifecycle import AppLifecycleController
 from app.services.clipboard_service import ClipboardService
+from app.services.paste_service import PasteService
 from app.services.settings_service import SettingsService
 from app.services.single_instance_service import SingleInstanceService
 from app.ui.main_window import MainWindow
@@ -53,6 +54,7 @@ def create_application(argv: Sequence[str]) -> QApplication:
     parser = ClipboardParser(preview_limit=90, thumbnail_size=48)
     store = HistoryStore(max_items=100)
     service = ClipboardService(clipboard=clipboard, store=store)
+    paste_service = PasteService(clipboard_service=service)
     monitor = ClipboardMonitor(clipboard=clipboard, parser=parser, store=store)
     settings_service = SettingsService()
     start_minimized = start_minimized or settings_service.load_start_minimized_to_tray()
@@ -62,8 +64,10 @@ def create_application(argv: Sequence[str]) -> QApplication:
         store=store,
         service=service,
         monitor=monitor,
+        paste_service=paste_service,
     )
     panel_controller = PanelController(window=window, settings_service=settings_service)
+    window.set_hide_panel_callback(panel_controller.hide_panel)
 
     tray_settings = settings_service.load_tray_settings()
     panel_controller.set_always_on_top(tray_settings.always_on_top)
@@ -85,6 +89,7 @@ def create_application(argv: Sequence[str]) -> QApplication:
         autostart_service=autostart_service,
         settings_controller=settings_controller,
         start_minimized=start_minimized,
+        paste_service=paste_service,
     )
     app._lifecycle = lifecycle  # type: ignore[attr-defined]
     app._single_instance = single_instance  # type: ignore[attr-defined]
