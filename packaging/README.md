@@ -61,7 +61,7 @@ Current behavior:
 - Default install path: `%LOCALAPPDATA%\Programs\CtrlV`.
 - Start Menu shortcut is always created.
 - Desktop shortcut is always created.
-- Optional startup checkbox creates Startup shortcut to `CtrlV.exe --startup`.
+- Startup shortcut is always created to `CtrlV.exe --startup` (can be disabled in app settings/tray).
 - Final screen keeps `Launch CtrlV now` checked.
 - Installer requests closing running CtrlV before replacing files.
 
@@ -78,3 +78,4 @@ If icon file `assets/icons/app.ico` is missing, build continues with a warning a
 - No code signing.
 - No auto-updater.
 - Windows-only packaging pipeline.
+- Inno Setup 6 is required for installer builds.

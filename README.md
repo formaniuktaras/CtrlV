@@ -30,6 +30,7 @@ CtrlV keeps a local clipboard history and lets you reuse old clipboard content w
 | Double click text item | Copies and auto-pastes into previous window |
 | Double click image/file item | Copies only, user pastes manually |
 | Copy to clipboard | Copies selected item only |
+| Enter on selected item | Same as double click |
 | Delete | Deletes selected unpinned item |
 | Pin/unpin | Keeps item available in Pinned |
 | Clear history | Clears history, preserves pinned items |
@@ -60,7 +61,8 @@ Installer behavior:
 - No admin rights required (per-user install).
 - Start Menu shortcut is always created.
 - Desktop shortcut is always created.
-- The only installer option is startup launch (`Launch CtrlV when Windows starts`).
+- Startup shortcut is always created (`CtrlV.exe --startup`).
+- CtrlV starts with Windows by default. Disable it from **Tray → Launch at startup**.
 
 ### Portable
 
@@ -70,7 +72,7 @@ Installer behavior:
 
 Portable vs installer:
 
-- Installer: better Windows integration (shortcuts, uninstall entry, startup option).
+- Installer: better Windows integration (shortcuts, uninstall entry, startup default).
 - Portable: manual run and manual placement.
 
 ## Startup and tray behavior
@@ -157,9 +159,14 @@ powershell -ExecutionPolicy Bypass -File packaging/scripts/build_all.ps1
 
 - **Panel disappeared**: use tray → **Show sidebar** or **Reset panel position/state**.
 - **Auto-paste did not work**: CtrlV already copied text to clipboard; switch to target app and press `Ctrl+V` manually.
+- **Auto-paste goes to wrong window**:
+  - Open target app first.
+  - Show CtrlV after target app is active.
+  - If panel was revealed from collapsed edge hover, this flow is now fixed to remember the active target before reveal.
 - **App seems closed**: check system tray; close (`X`) can hide to tray.
+- **CtrlV starts but no window appears**: expected for startup launch; check system tray and click **Show sidebar**.
 - **Second launch does nothing**: expected; CtrlV runs as a single instance.
-- **Startup does not work**: verify startup toggle in settings/tray and check Startup shortcut exists.
+- **Startup does not work**: verify **Tray → Launch at startup** is enabled and check Startup shortcut exists.
 - **Installer cannot replace files**: close running CtrlV (or use tray **Quit**) and rerun installer.
 
 ## Uninstall

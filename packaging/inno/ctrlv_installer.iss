@@ -59,9 +59,6 @@ SetupIconFile={#AppIconPath}
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
-[Tasks]
-Name: "autostart"; Description: "Launch CtrlV when Windows starts"; GroupDescription: "Startup options:"
-
 [Files]
 Source: "{#PortableDir}\\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 
@@ -69,7 +66,7 @@ Source: "{#PortableDir}\\*"; DestDir: "{app}"; Flags: recursesubdirs createallsu
 Name: "{group}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; WorkingDir: "{app}"
 Name: "{group}\\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; WorkingDir: "{app}"
-Name: "{userstartup}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; Parameters: "--startup"; Tasks: autostart; WorkingDir: "{app}"
+Name: "{userstartup}\\{#MyAppName}"; Filename: "{app}\\{#MyAppExeName}"; Parameters: "--startup"; WorkingDir: "{app}"
 
 [Run]
 Filename: "{app}\\{#MyAppExeName}"; Description: "Launch {#MyAppName} now"; WorkingDir: "{app}"; Flags: nowait postinstall skipifsilent checked

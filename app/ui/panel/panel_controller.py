@@ -49,6 +49,7 @@ class PanelController(QObject):
 
     state_changed = Signal(object)
     visibility_changed = Signal(bool)
+    before_hover_expand = Signal()
 
     def __init__(self, window: MainWindow, settings_service: SettingsService) -> None:
         super().__init__(window)
@@ -59,7 +60,7 @@ class PanelController(QObject):
             settings_service=settings_service,
         )
 
-        self._behavior.hover_expand_requested.connect(self.expand_panel)
+        self._behavior.hover_expand_requested.connect(self._expand_panel_from_hover)
         self._behavior.hover_collapse_requested.connect(self.collapse_panel)
 
         self._window.visibility_changed.connect(self._on_visibility_changed)
@@ -171,6 +172,10 @@ class PanelController(QObject):
         if self.snapshot.dock_state != DockState.FLOATING:
             self._behavior.expand_panel()
         self._sync_state()
+
+    def _expand_panel_from_hover(self) -> None:
+        self.before_hover_expand.emit()
+        self.expand_panel()
 
     def collapse_panel(self) -> None:
         state = self.snapshot

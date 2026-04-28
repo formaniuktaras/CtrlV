@@ -115,6 +115,7 @@ class AppLifecycleController(QObject):
     def _wire_window_signals(self) -> None:
         self._window.close_requested.connect(self._on_window_close_requested)
         self._panel_controller.visibility_changed.connect(lambda _: self._sync_runtime_state())
+        self._panel_controller.before_hover_expand.connect(self._remember_foreground_for_hover_reveal)
 
     def _wire_tray_signals(self) -> None:
         self._tray_service.toggle_sidebar_requested.connect(self.toggle_sidebar)
@@ -182,3 +183,7 @@ class AppLifecycleController(QObject):
             return
         self._tray_service.show_message("CtrlV", "CtrlV is running in the system tray.", timeout_ms=3000)
         self._settings_service.mark_first_run_completed()
+
+    def _remember_foreground_for_hover_reveal(self) -> None:
+        LOGGER.info("Action=remember_foreground reason=hover_reveal")
+        self._paste_service.remember_foreground_window()
