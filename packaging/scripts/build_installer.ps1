@@ -27,14 +27,14 @@ if (-not (Test-Path $issFile)) {
 
 $iscc = Find-Iscc
 if (-not $iscc) {
-    throw 'ISCC.exe was not found. Install Inno Setup 6 and ensure ISCC.exe is available in PATH or Program Files.'
+    throw 'Inno Setup (ISCC.exe) was not found. Install Inno Setup 6 from https://jrsoftware.org/isinfo.php and ensure ISCC.exe is available in PATH or Program Files.'
 }
 
 New-DirectoryIfMissing -Path $releaseInstallerDir
 
 $iconArg = "/DAppIconPath=$iconPath"
 if (-not (Test-Path $iconPath)) {
-    Write-Host "   Icon file not found ($iconPath). Using default installer icon."
+    Write-Warning "Icon file not found ($iconPath). Using default installer icon."
     $iconArg = '/DAppIconPath='
 }
 

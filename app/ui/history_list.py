@@ -46,6 +46,20 @@ class HistoryListWidget(QListWidget):
             return None
         return selected[0].data(ITEM_ROLE)
 
+    def selected_item_id(self) -> str | None:
+        item = self.selected_item()
+        return item.id if item is not None else None
+
+    def select_item_by_id(self, item_id: str | None) -> None:
+        if item_id is None:
+            return
+        for row in range(self.count()):
+            candidate = self.item(row)
+            data = candidate.data(ITEM_ROLE)
+            if data is not None and data.id == item_id:
+                self.setCurrentItem(candidate)
+                return
+
     def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self.restore_requested.emit()
