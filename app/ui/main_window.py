@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 
 from app.core.clipboard_monitor import ClipboardMonitor
 from app.core.history_store import HistoryStore
-from app.core.models import ClipboardItem
+from app.core.models import ClipboardItem, ClipboardItemType
 from app.services.clipboard_service import ClipboardService
 from app.services.paste_service import PasteService
 from app.ui.history_list import HistoryListWidget
@@ -37,6 +37,7 @@ class MainWindow(QMainWindow):
         monitor: ClipboardMonitor,
         paste_service: PasteService,
         hide_panel_callback: Callable[[], None] | None = None,
+        paste_delay_ms: int = 150,
     ) -> None:
         super().__init__()
         self._store = store
@@ -44,6 +45,7 @@ class MainWindow(QMainWindow):
         self._monitor = monitor
         self._paste_service = paste_service
         self._hide_panel_callback = hide_panel_callback
+        self._paste_delay_ms = paste_delay_ms
 
         self._drag_handle = QWidget(self)
         self._tabs = QTabWidget(self)
@@ -171,23 +173,27 @@ class MainWindow(QMainWindow):
             return
 
         self._monitor.mark_programmatic_fingerprint(item.fingerprint)
-        restored = self._service.restore_item(item)
-        if not restored:
-            self._status_label.setText("Failed to copy selected item")
+
+        if item.item_type is not ClipboardItemType.TEXT:
+            restored = self._service.restore_item(item)
+            if restored:
+                self._status_label.setText("Copied to clipboard. Paste manually with Ctrl+V")
+            else:
+                self._status_label.setText("Failed to copy selected item")
             return
 
-        self._status_label.setText("Copied to clipboard. Pasting into previous window…")
         if self._hide_panel_callback is not None:
             self._hide_panel_callback()
 
-        QTimer.singleShot(150, self._finalize_paste)
+        self._status_label.setText("Copied to clipboard. Pasting into previous window…")
+        QTimer.singleShot(self._paste_delay_ms, lambda: self._finalize_paste(item))
 
-    def _finalize_paste(self) -> None:
-        pasted = self._paste_service.paste_clipboard_to_previous_window()
+    def _finalize_paste(self, item: ClipboardItem) -> None:
+        pasted = self._paste_service.paste_item(item)
         if pasted:
             self._status_label.setText("Pasted into previous window")
         else:
-            self._status_label.setText("Copied to clipboard. Paste manually with Ctrl+V.")
+            self._status_label.setText("Copied to clipboard. Paste manually with Ctrl+V")
 
     def _toggle_pin(self, item_id: str) -> None:
         if self._service.toggle_pin(item_id):

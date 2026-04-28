@@ -65,6 +65,7 @@ def create_application(argv: Sequence[str]) -> QApplication:
         service=service,
         monitor=monitor,
         paste_service=paste_service,
+        paste_delay_ms=150,
     )
     panel_controller = PanelController(window=window, settings_service=settings_service)
     window.set_hide_panel_callback(panel_controller.hide_panel)
