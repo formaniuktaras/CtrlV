@@ -113,7 +113,7 @@ class TrayService(QObject):
 
     def update_menu_state(self, state: TrayMenuState) -> None:
         if self._toggle_sidebar_action is not None:
-            should_show = (not state.sidebar_visible) or state.sidebar_collapsed
+            should_show = not state.sidebar_visible
             self._toggle_sidebar_action.setText("Show sidebar" if should_show else "Hide sidebar")
 
         if self._always_on_top_action is not None:

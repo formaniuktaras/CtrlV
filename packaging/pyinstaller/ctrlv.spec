@@ -7,18 +7,26 @@ project_root = Path(__file__).resolve().parents[2]
 app_entry = project_root / 'app' / 'main.py'
 icon_path = project_root / 'assets' / 'icons' / 'app.ico'
 
+datas = []
+if icon_path.exists():
+    datas.append((str(icon_path), 'assets/icons'))
+
 hiddenimports = [
     'PySide6.QtCore',
     'PySide6.QtGui',
     'PySide6.QtWidgets',
     'shiboken6',
+    'win32api',
+    'win32con',
+    'win32gui',
+    'win32process',
 ]
 
 analysis = Analysis(
     [str(app_entry)],
     pathex=[str(project_root)],
     binaries=[],
-    datas=[],
+    datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
